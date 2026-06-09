@@ -13,7 +13,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCarbonStore } from '@/store/carbon-store';
 
+import { useIsInView } from '@/hooks/useIsInView';
+import { safeAsync } from '@/lib/errors';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { DashboardBackground } from '@/components/backgrounds';
 import { Button } from '@/components/ui/Button';
 import {
   Home,
@@ -32,10 +35,19 @@ import {
   RefreshCw
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-
-// Dynamic imports to prevent SSR hydration errors
-const Canvas = dynamic(() => import('@react-three/fiber').then((mod) => mod.Canvas), { ssr: false });
-const DataOrb = dynamic(() => import('@/components/three/DataOrb'), { ssr: false });
+import { WebGLErrorBoundary } from '@/components/three/WebGLErrorBoundary';
+const DataOrbs = dynamic(
+  () => import('@/components/three/DataOrbs'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ width: '100%', height: '100%' }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
 
 // Recharts components loaded dynamically to avoid hydration mismatches
 const ResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.ResponsiveContainer), { ssr: false });
@@ -91,6 +103,8 @@ const staggerContainer = {
 // --- MAIN PAGE COMPONENT ---
 export default function DashboardPage() {
   const pathname = usePathname();
+  const { ref: trendChartRef, inView: trendChartInView } = useIsInView();
+  const { ref: shareChartRef, inView: shareChartInView } = useIsInView();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'metrics' | 'scorecard'>('metrics');
   const [chartRange, setChartRange] = useState<'this_week' | 'last_week' | 'last_month'>('this_week');
@@ -118,21 +132,27 @@ export default function DashboardPage() {
   // API Call for insights
   const fetchAIInsights = async () => {
     setInsightsLoading(true);
-    try {
-      const res = await fetch('/api/insights', {
+    const [data, error] = await safeAsync(
+      fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activities, user }),
-      });
-      const data = await res.json();
-      if (data.insights) {
-        setInsights(data.insights);
-      }
-    } catch (err) {
-      console.error('Error fetching AI Insights:', err);
-    } finally {
+      }).then(async (res) => {
+        if (!res.ok) throw new Error('API request failed');
+        return res.json();
+      })
+    );
+
+    if (error) {
+      console.error('Error fetching AI Insights:', error.message);
       setInsightsLoading(false);
+      return;
     }
+
+    if (data && data.insights) {
+      setInsights(data.insights);
+    }
+    setInsightsLoading(false);
   };
 
   // Seeding realistic mock data
@@ -414,7 +434,12 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#080C0A] text-[#F8F9FF] dashboard-grid-bg flex flex-col md:flex-row select-none">
+      <>
+        <DashboardBackground />
+        <div 
+          className="min-h-screen text-[#F8F9FF] dashboard-grid-bg flex flex-col md:flex-row select-none"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
         
         {/* ================= LEFT SIDEBAR (Desktop/Tablet) ================= */}
         <aside className={`${activeTab === 'scorecard' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[240px] shrink-0 border-r border-[#1A2420] p-6 bg-[#080C0A]/70 backdrop-blur-md z-15`}>
@@ -529,13 +554,28 @@ export default function DashboardPage() {
           {/* Main Content Layout Container */}
           <main className={`${activeTab === 'metrics' ? 'block' : 'hidden md:block'} flex-1 p-6 md:p-8 space-y-8 max-w-7xl w-full mx-auto relative`}>
             
-            {/* Aesthetic 3D Ambient Canvas (DataOrb) in top-right */}
-            <div className="absolute top-4 right-4 w-[160px] h-[160px] pointer-events-none hidden md:block select-none z-0">
-              <Suspense fallback={null}>
-                <Canvas camera={{ position: [0, 0, 1.8], fov: 45 }}>
-                  <DataOrb />
-                </Canvas>
-              </Suspense>
+            {/* Aesthetic 3D Ambient Canvas (DataOrbs) in top-right */}
+            <div className="absolute top-4 right-4 hidden lg:block select-none z-0">
+              <div className="w-[260px] h-[260px] rounded-2xl border border-[#1A2420]/80 bg-[#080C0A]/40 p-4 backdrop-blur-md relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-verdant-green/30" />
+                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-verdant-green/30" />
+                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-verdant-green/30" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-verdant-green/30" />
+                <div className="font-mono text-[8px] text-slate-500 tracking-widest uppercase">3D TELEMETRY</div>
+                <div style={{ width: 220, height: 220, position: 'absolute', right: 20, top: 20 }}>
+                  <Suspense fallback={null}>
+                    <div
+                      role="img"
+                      aria-label="Carbon category data orbs"
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                      <WebGLErrorBoundary>
+                        <DataOrbs />
+                      </WebGLErrorBoundary>
+                    </div>
+                  </Suspense>
+                </div>
+              </div>
             </div>
 
             {/* --- CASE: EMPTY LOGS HUB / GET STARTED VIEW --- */}
@@ -742,8 +782,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="w-full h-[300px]">
-                      {mounted ? (
+                    <div ref={trendChartRef} className="w-full h-[300px]">
+                      {mounted && trendChartInView ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                             <defs>
@@ -783,9 +823,7 @@ export default function DashboardPage() {
                           </AreaChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="w-full h-full bg-[#080C0A]/40 border border-[#1A2420] rounded-xl flex items-center justify-center font-mono text-xs text-white/30">
-                          Calibrating Charts...
-                        </div>
+                        <div className="skeleton w-full h-full" style={{ height: 300, borderRadius: 12 }} />
                       )}
                     </div>
                   </div>
@@ -797,8 +835,8 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Donut Chart View */}
-                    <div className="relative w-full h-[200px] flex items-center justify-center my-2">
-                      {mounted ? (
+                    <div ref={shareChartRef} className="relative w-full h-[200px] flex items-center justify-center my-2">
+                      {mounted && shareChartInView ? (
                         <>
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -833,9 +871,7 @@ export default function DashboardPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="w-full h-full bg-[#080C0A]/40 border border-[#1A2420] rounded-xl flex items-center justify-center font-mono text-xs text-white/30">
-                          Calibrating Donut Shares...
-                        </div>
+                        <div className="skeleton w-full h-full" style={{ height: 200, borderRadius: 12 }} />
                       )}
                     </div>
 
@@ -995,7 +1031,8 @@ export default function DashboardPage() {
           </main>
         </div>
 
-      </div>
+        </div>
+      </>
     </PageTransition>
   );
 }

@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { useCarbonStore } from '@/store/carbon-store';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card';
 import {
@@ -38,9 +38,10 @@ const CATEGORY_LABELS = {
   lifestyle: 'Lifestyle',
 };
 
-export function CarbonChart() {
+export const CarbonChart = memo(function CarbonChart() {
   const [mounted, setMounted] = useState(false);
-  const { activities, summary } = useCarbonStore();
+  const activities = useCarbonStore((state) => state.activities);
+  const summary = useCarbonStore((state) => state.summary);
 
   useEffect(() => {
     setMounted(true);
@@ -220,4 +221,6 @@ export function CarbonChart() {
       </Card>
     </div>
   );
-}
+});
+
+CarbonChart.displayName = 'CarbonChart';

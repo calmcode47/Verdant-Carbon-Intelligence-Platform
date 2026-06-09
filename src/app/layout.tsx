@@ -7,7 +7,7 @@
 
 import type { Metadata } from 'next';
 import { Navigation } from '@/components/layout/Navigation';
-import { CustomCursor } from '@/components/ui/CustomCursor';
+
 import { TooltipProvider } from '@/components/ui/Tooltip';
 import '@/styles/globals.css';
 
@@ -26,8 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body>
-        <CustomCursor />
+      <body style={{ background: '#030810' }}>
+
         <TooltipProvider delayDuration={200}>
           <Navigation />
           <main>{children}</main>

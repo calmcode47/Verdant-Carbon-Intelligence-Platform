@@ -9,6 +9,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { safePixelRatio, getPerformanceTier, particleCount as getParticleCount } from '@/lib/performance';
 
 export default function LeafParticles() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,12 +30,12 @@ export default function LeafParticles() {
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: getPerformanceTier() === 'HIGH',
       alpha: true,
       powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(safePixelRatio());
 
     // Create a glowing dot texture for firefly/leaf particles
     const makeLeafTexture = (color: string) => {
@@ -57,7 +58,7 @@ export default function LeafParticles() {
     const goldTex = makeLeafTexture('rgba(255, 214, 0, 1)');
 
     // Particle system
-    const particleCount = 350;
+    const particleCount = getParticleCount(350);
     const positions = new Float32Array(particleCount * 3);
     const velocities: { x: number; y: number; sway: number; swayOffset: number; speed: number }[] = [];
     const types = new Uint8Array(particleCount); // 0 = green leaf, 1 = gold firefly

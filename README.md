@@ -91,13 +91,13 @@ Log an activity  →  AI analyses your pattern  →  Get personalised tips
 ## ✨ What Makes Verdant Unique
 
 ### 1. 🧠 Gemini-Powered Intelligence — Not Just a Calculator
-Every user gets a **personal AI carbon advisor** (powered by Google Gemini 1.5 Flash) that analyses their activity patterns and generates 4 insight types: **Tips**, **Warnings**, **Achievements**, and **Month-end Predictions** — each backed by IPCC/EPA emission data.
+Every user gets a **personal AI carbon advisor** (powered by Google Gemini 1.5 Flash) that analyses their activity patterns and generates 4 insight types: **Tips**, **Warnings**, **Achievements**, and **Month-end Predictions** — each backed by IPCC/EPA emission data. A built-in rate-limiter (12 req/min per IP) and prompt sanitizer protect the endpoint.
 
 ### 2. 🎮 Eco Warrior Gamification — Arena-Level Engagement
-The Challenges page is designed like a competitive gaming arena with a Three.js particle background, **live countdown timers**, **animated XP bars**, **hexagonal SVG badge rarity system** (Common → Legendary), a **10-warrior global leaderboard** with animated staggered entrance, and spring-physics card animations.
+The Challenges page is designed like a competitive gaming arena with **live countdown timers**, **animated XP bars**, **hexagonal SVG badge rarity system** (Common → Legendary), a **10-warrior global leaderboard** with animated staggered entrance, and spring-physics card animations.
 
 ### 3. 🌐 Three.js Immersive 3D — Science Meets Art
-Every major page uses a dedicated Three.js scene: an **Earth Globe** on the home page, **Constellation Background** on the dashboard, **Carbon Molecule** on the tracking page, **Data Orb** on insights, and **Leaf/Firefly particles** on challenges — making the experience feel alive and planetary-scale.
+Every major page uses a dedicated Three.js scene. The centrepiece is a **physically-rendered Earth Globe** on the home page with a **2048×1024 fBm fractal terrain** (multi-octave noise, elevation-graded biomes, polar ice caps), **per-pixel roughness map** (shiny oceans, matte land), **procedural cloud layer**, **3 000-star field**, and **orbital rings** — making the globe look like a real satellite render. Secondary pages use CSS-based aurora bokeh gradients for zero GPU overhead.
 
 ### 4. 📐 Science-Grade Emission Factors
 All calculations use real peer-reviewed emission factors from **IPCC AR6**, **EPA eGRID**, and **IEA** — covering 24 sub-categories across Transport, Food, Energy, and Lifestyle. Not guesses. Not averages. Calibrated science.
@@ -112,21 +112,24 @@ The Insights page combines real AI analysis with **4 interactive Recharts visual
 Verdant has **two distinct design personalities**: a cool dark-sci-fi palette (`#00E676` neon green) for the main platform, and a **warm amber sanctuary** palette (`#FF8F00`) for the Profile page — reflecting the emotional shift from performance to reflection.
 
 ### 8. ♿ Accessibility-First
-Every interactive element has unique `id` attributes for browser testing, ARIA `role` and `aria-checked` on toggles, keyboard navigation support, and high-contrast colour ratios throughout.
+Every interactive element has unique `id` attributes for browser testing, ARIA `role` and `aria-checked` on toggles, keyboard navigation support, and high-contrast colour ratios throughout. All Three.js canvases are wrapped with `role="img"` and descriptive `aria-label` attributes.
+
+### 9. 🔒 Security-Hardened API
+The `/api/insights` route includes in-memory **IP-based rate limiting** (12 req/min), **prompt sanitization** (strips HTML/SQL injection attempts), **input length caps**, and strict **Content-Security-Policy** headers set globally via `next.config.js`.
 
 ---
 
 ## 📄 Pages & Features
 
 ### 🏠 Home — `/ ` · *The Carbon Observatory*
-The entry point to Verdant. An interactive **Three.js Earth Globe** rotates in real time, symbolising the planet you're protecting. A hero section with typewriter effect and floating stats cards provides instant orientation. The overall aesthetic is a dark-glass futuristic control room.
+The entry point to Verdant. An interactive **Three.js Earth Globe** rotates in real time with mouse-driven tilt. The globe features a **2048×1024 procedural terrain texture** generated from 5-octave fractional Brownian motion noise — producing realistic continent biomes (tropical lowlands, highland savanna, mountain peaks, polar ice caps), a **per-pixel roughness map** (oceans are specular, land is matte), a **cloud layer** with independent drift speed, a **3 000-star field**, and **two orbital rings**. A multi-layer CSS aurora bokeh background adds depth behind the globe.
 
 **Key features:** Animated hero with `background-clip: text` gradient, glassmorphism hero card, scroll-triggered animations, carbon footprint context cards.
 
 ---
 
 ### 📊 Dashboard — `/dashboard` · *Mission Control*
-The nerve centre. A **Constellation Background** Three.js scene with 200 animated star-particles forms the backdrop for a data-rich grid of carbon metrics.
+The nerve centre. A data-rich grid of carbon metrics with an ambient **DataOrbs** Three.js widget (4 physics-animated glassy spheres) in the corner.
 
 **Key features:** Real-time today/week/month/year carbon cards, category breakdown donut chart, weekly trend sparkline, AI insights preview panel, challenge progress widgets, live leaderboard widget, and the carbon score progress ring in the nav bar.
 
@@ -140,21 +143,21 @@ The logging engine. A **Carbon Molecule** Three.js animation hovers above a cate
 ---
 
 ### 🔍 Insights — `/insights` · *The AI Oracle*
-The intelligence layer. Powered by **Google Gemini 1.5 Flash**, this page analyses your last 20 activities and returns structured, actionable insights. An interactive AI chat bubble lets you ask specific questions ("Give me a 7-day carbon diet").
+The intelligence layer. Powered by **Google Gemini 1.5 Flash**, this page analyses your last 20 activities and returns structured, actionable insights. An interactive AI chat bubble lets you ask specific questions. A **NeuralCore** Three.js widget and deep violet aurora bokeh background set the AI mood.
 
 **Key features:** Gemini API integration with rich fallback, 4 insight types (Tip / Warning / Achievement / Prediction), difficulty and potential-saving labels, 4 Recharts visualisations, AI chat interface with contextual keyword matching.
 
 ---
 
 ### ⚔️ Challenges — `/challenges` · *The Eco Warrior Arena*
-The gamification hub. A **LeafParticles Three.js scene** (350 drifting green + gold particles) sets an epic environmental battlefield. Six active challenges are presented as animated cards that spring in from above.
+The gamification hub. An **emerald aurora bokeh** CSS background sets an epic environmental atmosphere. Six active challenges are presented as animated cards.
 
 **Key features:** Live countdown timers (per-second), animated progress bars, category colour system, challenge detail modal with mini sparkline + AI tips, JOIN/ABANDON flow with confirmation, SHARE via Web Share API, 10-user global leaderboard with gold/silver/bronze medals, hexagonal badge grid with Legendary sparkle animations, custom challenge creation form (Level 5+ unlock), typewriter hero animation.
 
 ---
 
 ### 👤 Profile — `/profile` · *Personal Carbon Sanctuary*
-The reflective space. A warm amber sanctuary that contrasts with the platform's sci-fi green — signalling that this is a space for self-reflection, not competition.
+The reflective space. A warm **amber aurora bokeh** background contrasts with the platform's sci-fi green — signalling that this is a space for self-reflection, not competition.
 
 **Key features:** Clickable avatar with camera overlay (file input), level title system (10 levels from Eco Starter → Verdant Master), animated XP bar, vertical milestone timeline with Framer Motion scroll animations, inline-editable carbon goals with animated goal bar, 3-section settings panel (Notifications / Preferences / Privacy), destructive data management with CSV export and type-to-confirm delete, 30-day colour-coded Recharts bar chart with dual reference lines.
 
@@ -422,38 +425,51 @@ verdant-carbon-intelligence-platform/
 │   │   ├── profile/page.tsx      # 👤 Personal Sanctuary
 │   │   ├── layout.tsx            # Root layout + Navigation
 │   │   └── api/
-│   │       └── insights/route.ts # Gemini AI endpoint
+│   │       └── insights/route.ts # Gemini AI endpoint (rate-limited)
 │   ├── components/
+│   │   ├── backgrounds/
+│   │   │   ├── LandingBackground.tsx    # Home aurora bokeh CSS
+│   │   │   ├── InsightsBackground.tsx   # Insights deep-violet bokeh
+│   │   │   ├── ChallengesBackground.tsx # Emerald bokeh CSS
+│   │   │   └── ProfileBackground.tsx    # Amber bokeh CSS
 │   │   ├── layout/
 │   │   │   ├── Navigation.tsx    # Glassmorphic nav + carbon ring
 │   │   │   └── PageTransition.tsx
 │   │   ├── three/
-│   │   │   ├── LeafParticles.tsx    # Challenges background
-│   │   │   ├── EarthGlobe.tsx       # Home page globe
+│   │   │   ├── EarthGlobe.tsx           # Home globe (fBm + clouds + PBR)
+│   │   │   ├── CarbonMolecule.tsx       # Track page 3D molecule
+│   │   │   ├── DataOrbs.tsx             # Dashboard ambient orbs
+│   │   │   ├── NeuralCore.tsx           # Insights AI core widget
 │   │   │   ├── ConstellationBackground.tsx
-│   │   │   ├── CarbonMolecule.tsx
-│   │   │   ├── DataOrb.tsx
-│   │   │   └── AICore.tsx
+│   │   │   ├── LeafParticles.tsx
+│   │   │   └── WebGLErrorBoundary.tsx   # Error boundary for all canvases
+│   │   ├── visualizations/
+│   │   │   ├── EarthCanvas.tsx
+│   │   │   └── EmissionGlobe.tsx
 │   │   ├── challenges/
 │   │   │   └── ChallengeList.tsx
 │   │   └── ui/
 │   │       ├── Button.tsx
 │   │       ├── Card.tsx
-│   │       ├── CustomCursor.tsx
 │   │       ├── Dialog.tsx
 │   │       ├── Progress.tsx
 │   │       └── Tooltip.tsx
+│   ├── hooks/
+│   │   └── useVisibilityPause.ts # Pause RAF when tab is hidden
 │   ├── store/
 │   │   └── carbon-store.ts       # Zustand store (persisted)
 │   ├── lib/
 │   │   ├── carbon-calculator.ts  # Emission factor engine
+│   │   ├── errors.ts             # safeAsync error utility
+│   │   ├── performance.ts        # getPerformanceTier / safePixelRatio
 │   │   ├── gemini.ts             # Gemini SDK setup
 │   │   └── utils.ts
 │   ├── types/
 │   │   └── index.ts              # TypeScript interfaces
 │   └── styles/
 │       └── globals.css           # CSS custom properties + animations
-├── next.config.js
+├── next.config.js                # Security headers + image config
+├── .eslintrc.json                # ESLint rules (no-any, no-unused-vars)
 ├── tailwind.config.ts
 ├── tsconfig.json
 └── package.json
@@ -594,13 +610,51 @@ npm run lint
 
 ### Build Verification
 ```bash
-# Full production build — must complete with 0 errors
+# Full production build — must complete with 0 errors, 0 warnings
 npm run build
 
 # Expected output:
 # ✓ Compiled successfully
-# ✓ Generating static pages (8/8)
+# ✓ Generating static pages (11/11)
+
+# If you see MODULE_NOT_FOUND errors, clear the Next.js cache first:
+rm -rf .next && npm run build
 ```
+
+---
+
+## 📋 Recent Changes (v1.1.0)
+
+### 🌍 Earth Globe — Complete Rewrite
+- **2048×1024 fBm fractal terrain** — 5-octave noise produces realistic continent shapes with elevation-graded biomes (tropical green → highland ochre → mountain snow → polar ice)
+- **Per-pixel roughness map** — ocean pixels are near-mirror (roughness 18/255), land pixels are matte (200–245/255); the directional sun creates a real specular glint on water
+- **Procedural cloud layer** — separate noise field, rendered as a semi-transparent `alphaMap` sphere rotating slightly faster than the surface
+- **3 000-star field** — seeded RNG for deterministic star positions, slow independent drift
+- **Two orbital rings** — thin torus geometries at different tilts and speeds
+- **Dual atmosphere** — inner green rim glow + outer blue Rayleigh-scatter haze
+- **Delta-time animation** — frame-rate independent rotation
+- **Mouse-driven tilt** — 3.5% lerp factor for buttery response
+
+### 🎨 Professional Backgrounds
+- **Home** (`LandingBackground`): 4-layer drifting aurora bokeh + pulsing nebula + dot-grid overlay
+- **Insights** (`InsightsBackground`): Deep violet / electric-blue aurora bokeh
+- **Challenges** (`ChallengesBackground`): Emerald / mint / teal drifting bokeh gradients
+- **Profile** (`ProfileBackground`): Warm amber / bronze bokeh aurora
+
+### 🔒 Security & Code Quality
+- **CSP headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, full `Content-Security-Policy` via `next.config.js`
+- **Rate limiting** — in-memory IP-based limiter (12 req/60s) on `/api/insights`
+- **Prompt sanitization** — strips HTML tags and SQL-like patterns from user input
+- **ESLint** — `@typescript-eslint/no-explicit-any: error`, `no-unused-vars: error`
+- **`safeAsync`** — typed error-handling wrapper replaces all unguarded `fetch` calls
+- **`useVisibilityPause`** — pauses Three.js RAF loops when the browser tab is hidden
+- **`getPerformanceTier`** — downgrades geometry complexity on low-end devices
+
+### 🖱️ UX Polish
+- Removed green custom cursor (native OS cursor restored)
+- Removed mouse-tracking card tilt effects (cleaner, less distracting)
+- `scroll-behavior: smooth` + `-webkit-font-smoothing: antialiased` on `body`
+- Carbon Molecule no longer breaks bonds on hover (autonomous animation only)
 
 ---
 

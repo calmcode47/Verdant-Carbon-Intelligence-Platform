@@ -12,15 +12,51 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { LandingBackground } from '@/components/backgrounds';
 import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { ChevronDown, ArrowRight, ShieldCheck, Mail, Zap, RefreshCw, Database } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { WebGLErrorBoundary } from '@/components/three/WebGLErrorBoundary';
 
 // Dynamic imports of 3D Canvas and scenes to prevent SSR evaluation issues
-const Canvas = dynamic(() => import('@react-three/fiber').then((mod) => mod.Canvas), { ssr: false });
-const EarthGlobe = dynamic(() => import('@/components/three/EarthGlobe'), { ssr: false });
-const CarbonMolecule = dynamic(() => import('@/components/three/CarbonMolecule'), { ssr: false });
+const Canvas = dynamic(
+  () => import('@react-three/fiber').then((mod) => mod.Canvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ width: '100%', height: '100%' }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
+const EarthGlobe = dynamic(
+  () => import('@/components/three/EarthGlobe'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ width: '100%', height: '100%' }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
+const CarbonMolecule = dynamic(
+  () => import('@/components/three/CarbonMolecule'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ width: '100%', height: '100%' }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
 
 // 1. Counter Ticker Component using Intersection Observer
 function StatCounter({ target, decimals = 0, suffix = '' }: { target: number; decimals?: number; suffix?: string }) {
@@ -127,35 +163,8 @@ interface FeatureCardProps {
 }
 
 function FeatureCard({ title, desc, icon: Icon, stepNum }: FeatureCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    // Maximum 12 degrees rotation
-    const rotateX = ((y - centerY) / centerY) * 12;
-    const rotateY = -((x - centerX) / centerX) * 12;
-    setTilt({ x: rotateX, y: rotateY });
-  };
-
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-  };
-
   return (
     <div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: 'transform 0.1s ease-out',
-      }}
       className="gradient-border-card relative p-8 rounded-2xl border border-verdant-border/20 bg-gradient-to-br from-[#0d1f17] to-[#0a1510] shadow-card group select-none overflow-hidden"
     >
       <div className="absolute top-0 right-0 p-4 font-display text-7xl text-verdant-green/5 font-bold">
@@ -218,7 +227,12 @@ export default function LandingPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#050810] text-[#F8F9FF] selection:bg-verdant-green/35 selection:text-white">
+      <>
+        <LandingBackground />
+        <div 
+          className="min-h-screen text-[#F8F9FF] selection:bg-verdant-green/35 selection:text-white"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
         
         {/* ================= SECTION 1: HERO ================= */}
         <section className="relative w-full h-[calc(100vh-64px)] flex flex-col items-center justify-center overflow-hidden border-b border-slate-900">
@@ -237,9 +251,15 @@ export default function LandingPage() {
           ) : (
             <div className="absolute inset-0 z-0">
               <Suspense fallback={null}>
-                <Canvas camera={{ position: [0, 0.2, 2.5], fov: 50 }} gl={{ antialias: true }}>
-                  <EarthGlobe />
-                </Canvas>
+                <div
+                  role="img"
+                  aria-label="Interactive Earth globe visualization"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <WebGLErrorBoundary>
+                    <EarthGlobe />
+                  </WebGLErrorBoundary>
+                </div>
               </Suspense>
             </div>
           )}
@@ -463,12 +483,32 @@ export default function LandingPage() {
                   Loading Molecule Model...
                 </div>
               }>
-                <Canvas camera={{ position: [0, 0, 3], fov: 45 }}>
-                  <CarbonMolecule />
-                </Canvas>
+                <div
+                  role="img"
+                  aria-label="3D carbon molecule visualization"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <WebGLErrorBoundary>
+                    <Canvas
+                      camera={{ position: [0, 0, 3], fov: 45 }}
+                      dpr={safePixelRatio()}
+                      performance={{ min: 0.5, max: 1 }}
+                      frameloop="always"
+                      gl={{
+                        antialias: getPerformanceTier() === 'HIGH',
+                        alpha: true,
+                        powerPreference: 'default',
+                        stencil: false,
+                        depth: true,
+                      }}
+                    >
+                      <CarbonMolecule />
+                    </Canvas>
+                  </WebGLErrorBoundary>
+                </div>
               </Suspense>
               <div className="absolute bottom-4 right-4 pointer-events-none">
-                <span className="font-mono text-[9px] text-slate-600">HOVER TO DISRUPT BONDS</span>
+                <span className="font-mono text-[9px] text-slate-600">3D MOLECULAR STRUCTURE</span>
               </div>
             </div>
 
@@ -569,6 +609,7 @@ export default function LandingPage() {
         </footer>
         
       </div>
+      </>
     </PageTransition>
   );
 }

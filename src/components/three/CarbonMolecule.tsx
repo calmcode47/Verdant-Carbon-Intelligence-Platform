@@ -8,13 +8,15 @@
 
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useVisibilityPause } from '@/hooks/useVisibilityPause';
 
 export default function CarbonMolecule() {
   const groupRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
+  const hovered = false; // Disable hover disruptions
+  const isVisible = useVisibilityPause();
 
   // Position and bond length tracking refs for animation loop
   const distance = useRef(1.0); // Default bond distance
@@ -26,6 +28,7 @@ export default function CarbonMolecule() {
   const b2bRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
+    if (!isVisible) return;
     const elapsed = state.clock.getElapsedTime();
 
     // Bobbing and spinning group movement
@@ -66,11 +69,7 @@ export default function CarbonMolecule() {
   });
 
   return (
-    <group
-      ref={groupRef}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
+    <group ref={groupRef}>
       {/* Ambient and directional lights local to molecule view */}
       <ambientLight intensity={0.6} />
       <pointLight position={[5, 5, 5]} intensity={1.5} color="#F8F9FF" />

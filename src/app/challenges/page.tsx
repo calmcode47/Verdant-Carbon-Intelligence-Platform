@@ -9,13 +9,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { useCarbonStore } from '@/store/carbon-store';
+import { ChallengesBackground } from '@/components/backgrounds';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { X, Plus, Share2, Trash2, Lock } from 'lucide-react';
 
-// Dynamically import the Three.js particle system (no SSR)
-const LeafParticles = dynamic(() => import('@/components/three/LeafParticles'), { ssr: false });
+
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
 
@@ -327,8 +326,7 @@ function LevelBadge({ level }: { level: number }) {
 }
 
 // ─── XP BAR ───────────────────────────────────────────────────────────────────
-function XPBar({ xp, level }: { xp: number; level: number }) {
-  const xpForLevel = level * 1000;
+function XPBar({ xp }: { xp: number }) {
   const xpInLevel = xp % 1000;
   const pct = Math.min(100, (xpInLevel / 1000) * 100);
   const [animated, setAnimated] = useState(0);
@@ -914,11 +912,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ChallengesPage() {
-  const { user } = useCarbonStore();
+  const user = useCarbonStore((state) => state.user);
   const level   = user?.level  ?? 1;
   const xp      = user?.xp     ?? 120;
   const streak  = user?.streak ?? 14;
-  const name    = user?.name   ?? 'Eco Warrior';
 
   const heroText     = useTypewriter('ECO WARRIOR\nARENA', 55);
   const [selectedChallenge, setSelectedChallenge] = useState<ArenaChallenge | null>(null);
@@ -934,10 +931,12 @@ export default function ChallengesPage() {
   const flameColor  = flameColors[flameTick % flameColors.length];
 
   return (
-    <div
-      className="min-h-screen relative overflow-x-hidden"
-      style={{ background: 'linear-gradient(160deg, #0A1F0E 0%, #061208 60%, #0A1F0E 100%)' }}
-    >
+    <>
+      <ChallengesBackground />
+      <div
+        className="min-h-screen relative overflow-x-hidden"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
       {/* CSS grain texture overlay */}
       <div
         className="fixed inset-0 pointer-events-none"
@@ -947,8 +946,7 @@ export default function ChallengesPage() {
         }}
       />
 
-      {/* Three.js leaf/firefly particles */}
-      <LeafParticles />
+
 
       {/* ── HERO: ARENA HEADER ──────────────────────────────────────────── */}
       <section className="relative z-10 pt-16 pb-12 px-4 sm:px-8 lg:px-16">
@@ -989,7 +987,7 @@ export default function ChallengesPage() {
             <div className="flex items-center gap-5">
               <LevelBadge level={level} />
               <div className="w-56">
-                <XPBar xp={xp} level={level} />
+                <XPBar xp={xp} />
               </div>
             </div>
 
@@ -1195,6 +1193,7 @@ export default function ChallengesPage() {
           66%       { opacity: 0.9; transform: scale(0.97) rotate(1deg); }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }

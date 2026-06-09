@@ -10,8 +10,12 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { WebGLErrorBoundary } from '@/components/three/WebGLErrorBoundary';
 import { useCarbonStore } from '@/store/carbon-store';
+import { useIsInView } from '@/hooks/useIsInView';
+import { safeAsync } from '@/lib/errors';
 import { ActivityCategory, AIInsight, Challenge } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -45,11 +49,24 @@ import {
   Legend
 } from 'recharts';
 
-import ConstellationBackground from '@/components/three/ConstellationBackground';
-import AICore from '@/components/three/AICore';
+
+
+const NeuralCore = dynamic(
+  () => import('@/components/three/NeuralCore'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ width: '100%', height: '100%' }}
+        aria-hidden="true"
+      />
+    ),
+  }
+);
 import FingerprintSVG from '@/components/insights/FingerprintSVG';
 import Confetti from '@/components/insights/Confetti';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { InsightsBackground } from '@/components/backgrounds';
 
 // --- CUSTOM TYPEWRITER COMPONENT ---
 function Typewriter({ text, onComplete }: { text: string; onComplete?: () => void }) {
@@ -80,8 +97,75 @@ interface ChatMessage {
   isNew?: boolean;
 }
 
+
+function WarningSparkline({ data }: { data: { day: string; carbon: number }[] }) {
+  const { ref, inView } = useIsInView();
+  return (
+    <div ref={ref} className="flex-1 h-full pr-4">
+      {inView ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <Line 
+              type="monotone" 
+              dataKey="carbon" 
+              stroke="#FFB300" 
+              strokeWidth={2} 
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="skeleton w-full h-full" />
+      )}
+    </div>
+  );
+}
+
+function PredictionChart({ data }: { data: { day: string; actual: number | null; projected: number }[] }) {
+  const { ref, inView } = useIsInView();
+  return (
+    <div ref={ref} className="h-24 bg-[#06041A]/50 border border-[#7C3AED]/15 rounded-xl p-2 pr-4">
+      {inView ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <XAxis 
+              dataKey="day" 
+              stroke="#64748b" 
+              fontSize={9} 
+              tickLine={false} 
+              axisLine={false} 
+            />
+            <Line 
+              type="monotone" 
+              dataKey="actual" 
+              stroke="#00E5FF" 
+              strokeWidth={2} 
+              dot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="projected" 
+              stroke="#7C3AED" 
+              strokeWidth={1.5} 
+              strokeDasharray="4 4" 
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="skeleton w-full h-full" />
+      )}
+    </div>
+  );
+}
+
 export default function InsightsPage() {
-  const { activities, summary, challenges, setChallenges } = useCarbonStore();
+  const activities = useCarbonStore((state) => state.activities);
+  const summary = useCarbonStore((state) => state.summary);
+  const challenges = useCarbonStore((state) => state.challenges);
+  const setChallenges = useCarbonStore((state) => state.setChallenges);
+  const { ref: radarChartRef, inView: radarChartInView } = useIsInView();
+  const { ref: barChartRef, inView: barChartInView } = useIsInView();
 
   // Component Mount check to prevent Recharts/Next hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -112,27 +196,32 @@ export default function InsightsPage() {
   useEffect(() => {
     setMounted(true);
     const fetchInitialInsights = async () => {
-      try {
-        setIsAnalyzing(true);
-        const res = await fetch('/api/insights', {
+      setIsAnalyzing(true);
+      const [data, error] = await safeAsync(
+        fetch('/api/insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             activities: activities,
             summary: summary,
           }),
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setInsights(data.insights || []);
-          setPageSummary(data.summary || '');
-        }
-      } catch (err) {
-        console.error('Failed to load initial insights:', err);
-      } finally {
+        }).then(async (res) => {
+          if (!res.ok) throw new Error('API request failed');
+          return res.json();
+        })
+      );
+
+      if (error) {
+        console.error('Failed to load initial insights:', error.message);
         setIsAnalyzing(false);
+        return;
       }
+
+      if (data) {
+        setInsights(data.insights || []);
+        setPageSummary(data.summary || '');
+      }
+      setIsAnalyzing(false);
     };
 
     fetchInitialInsights();
@@ -192,18 +281,33 @@ export default function InsightsPage() {
     setIsChatLoading(true);
 
     try {
-      const res = await fetch('/api/insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activities: activities,
-          summary: summary,
-          userQuestion: textToSend,
-        }),
-      });
+      const [data, error] = await safeAsync(
+        fetch('/api/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activities: activities,
+            summary: summary,
+            userQuestion: textToSend,
+          }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error('API request failed');
+          return res.json();
+        })
+      );
 
-      if (res.ok) {
-        const data = await res.json();
+      if (error) {
+        console.error(error);
+        const errorMsg: ChatMessage = {
+          id: `err_${Date.now()}`,
+          sender: 'ai',
+          text: 'Connection error in the neural array. Unable to query Gemini core at this time.',
+        };
+        setChatMessages((prev) => [...prev, errorMsg]);
+        return;
+      }
+
+      if (data) {
         const aiMsg: ChatMessage = {
           id: `ai_${Date.now()}`,
           sender: 'ai',
@@ -211,17 +315,9 @@ export default function InsightsPage() {
           isNew: true,
         };
         setChatMessages((prev) => [...prev, aiMsg]);
-      } else {
-        throw new Error('API request failed');
       }
     } catch (err) {
       console.error(err);
-      const errorMsg: ChatMessage = {
-        id: `err_${Date.now()}`,
-        sender: 'ai',
-        text: 'Connection error in the neural array. Unable to query Gemini core at this time.',
-      };
-      setChatMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsChatLoading(false);
     }
@@ -322,9 +418,13 @@ export default function InsightsPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen text-[#F0F4FF] font-sans pb-20 relative select-none">
-        {/* Constellation background */}
-        <ConstellationBackground />
+      <>
+        <InsightsBackground />
+        <div 
+          className="min-h-screen text-[#F0F4FF] font-sans pb-20 relative select-none"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
+
 
         {/* Global Floating Toast */}
         <AnimatePresence>
@@ -389,9 +489,19 @@ export default function InsightsPage() {
               )}
             </div>
 
-            {/* AICore Concentric Widget */}
-            <div className="flex justify-center md:justify-end flex-shrink-0">
-              <AICore />
+            {/* NeuralCore AI Core Widget */}
+            <div className="w-[160px] h-[160px] flex justify-center md:justify-end flex-shrink-0 select-none">
+              <Suspense fallback={null}>
+                <div
+                  role="img"
+                  aria-label="AI intelligence core visualization"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <WebGLErrorBoundary>
+                    <NeuralCore />
+                  </WebGLErrorBoundary>
+                </div>
+              </Suspense>
             </div>
           </header>
 
@@ -529,19 +639,7 @@ export default function InsightsPage() {
 
                         {/* Sparkline chart */}
                         <div className="h-16 bg-[#06041A]/50 border border-[#FFB300]/15 rounded-xl p-2 flex items-center justify-between">
-                          <div className="flex-1 h-full pr-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={warningSparklineData}>
-                                <Line 
-                                  type="monotone" 
-                                  dataKey="carbon" 
-                                  stroke="#FFB300" 
-                                  strokeWidth={2} 
-                                  dot={false}
-                                />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
+                          <WarningSparkline data={warningSparklineData} />
                           <div className="text-right flex flex-col justify-center">
                             <span className="text-[9px] font-mono text-slate-400 block leading-none">PEAK INC.</span>
                             <span className="text-lg font-bold text-[#FF5252] font-mono leading-none mt-1">+32%</span>
@@ -622,34 +720,7 @@ export default function InsightsPage() {
                       </p>
 
                       {/* Prediction Chart */}
-                      <div className="h-24 bg-[#06041A]/50 border border-[#7C3AED]/15 rounded-xl p-2 pr-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={predictionProjectionData}>
-                            <XAxis 
-                              dataKey="day" 
-                              stroke="#64748b" 
-                              fontSize={9} 
-                              tickLine={false} 
-                              axisLine={false} 
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="actual" 
-                              stroke="#00E5FF" 
-                              strokeWidth={2} 
-                              dot={false}
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="projected" 
-                              stroke="#7C3AED" 
-                              strokeWidth={1.5} 
-                              strokeDasharray="4 4" 
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
+                      <PredictionChart data={predictionProjectionData} />
                     </motion.div>
                   );
                 })}
@@ -810,17 +881,21 @@ export default function InsightsPage() {
                   USER VS WORLD AVERAGE
                 </span>
                 
-                <div className="h-64 flex items-center justify-center relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="75%" data={getRadarDataForCategory(activeTab)}>
-                      <PolarGrid stroke="#2e2a56" />
-                      <PolarAngleAxis dataKey="subject" stroke="#8b9bb4" fontSize={9} />
-                      <PolarRadiusAxis angle={30} domain={[0, 'auto']} stroke="#4f4c7d" fontSize={8} />
-                      <Radar name="You" dataKey="User" stroke="#00E5FF" fill="#00E5FF" fillOpacity={0.25} />
-                      <Radar name="Global Average" dataKey="Average" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.15} />
-                      <Legend verticalAlign="bottom" height={24} fontSize={9} wrapperStyle={{ fontSize: '10px' }} />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                <div ref={radarChartRef} className="h-64 flex items-center justify-center relative">
+                  {mounted && radarChartInView ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={getRadarDataForCategory(activeTab)}>
+                        <PolarGrid stroke="#2e2a56" />
+                        <PolarAngleAxis dataKey="subject" stroke="#8b9bb4" fontSize={9} />
+                        <PolarRadiusAxis angle={30} domain={[0, 'auto']} stroke="#4f4c7d" fontSize={8} />
+                        <Radar name="You" dataKey="User" stroke="#00E5FF" fill="#00E5FF" fillOpacity={0.25} />
+                        <Radar name="Global Average" dataKey="Average" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.15} />
+                        <Legend verticalAlign="bottom" height={24} fontSize={9} wrapperStyle={{ fontSize: '10px' }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="skeleton w-full h-full" style={{ height: 256, borderRadius: 24 }} />
+                  )}
                 </div>
               </div>
 
@@ -852,16 +927,20 @@ export default function InsightsPage() {
                   <span className="font-mono text-[10px] text-slate-400 block tracking-widest uppercase">
                     30-DAY DAILY PATHWAY (KG CO₂)
                   </span>
-                  <div className="h-24 pr-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={getHistoricalTrend(activeTab)}>
-                        <XAxis dataKey="name" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ background: '#06041A', border: '1px solid #7C3AED', fontSize: '10px' }} />
-                        <Bar dataKey="Emissions" fill="#00E676" radius={[3, 3, 0, 0]} />
-                        <Bar dataKey="Average" fill="#7C3AED" opacity={0.3} radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div ref={barChartRef} className="h-24 pr-4">
+                    {mounted && barChartInView ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getHistoricalTrend(activeTab)}>
+                          <XAxis dataKey="name" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ background: '#06041A', border: '1px solid #7C3AED', fontSize: '10px' }} />
+                          <Bar dataKey="Emissions" fill="#00E676" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="Average" fill="#7C3AED" opacity={0.3} radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="skeleton w-full h-full" style={{ height: 96, borderRadius: 12 }} />
+                    )}
                   </div>
                 </div>
 
@@ -899,7 +978,8 @@ export default function InsightsPage() {
           </section>
 
         </div>
-      </div>
+        </div>
+      </>
     </PageTransition>
   );
 }

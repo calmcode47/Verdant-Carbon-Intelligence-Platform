@@ -11,11 +11,14 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useCarbonStore } from '@/store/carbon-store';
+import { particleCount as getParticleCount } from '@/lib/performance';
+import { useVisibilityPause } from '@/hooks/useVisibilityPause';
 
 export default function DataOrb() {
   const meshRef = useRef<THREE.Mesh>(null);
   const particlesRef = useRef<THREE.Points>(null);
   const todayCarbon = useCarbonStore((state) => state.summary?.today || 0);
+  const isVisible = useVisibilityPause();
 
   // Compute color based on today's carbon level
   // green (#00E676) if < 7, amber (#FFB300) if < 13, red (#FF5252) otherwise
@@ -27,7 +30,7 @@ export default function DataOrb() {
 
   // Particle positions inside the sphere (radius 0.7)
   const particlePositions = useMemo(() => {
-    const count = 120;
+    const count = getParticleCount(120);
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       // Uniform random point inside a sphere of radius 0.7
@@ -46,7 +49,7 @@ export default function DataOrb() {
 
   // Chaotic noise velocities for particles
   const particleVelocities = useMemo(() => {
-    const count = 120;
+    const count = getParticleCount(120);
     const velocities = new Float32Array(count * 3);
     for (let i = 0; i < count * 3; i++) {
       velocities[i] = (Math.random() - 0.5) * 0.15;
@@ -55,6 +58,7 @@ export default function DataOrb() {
   }, []);
 
   useFrame((state) => {
+    if (!isVisible) return;
     const elapsed = state.clock.getElapsedTime();
 
     // Slow wireframe rotation

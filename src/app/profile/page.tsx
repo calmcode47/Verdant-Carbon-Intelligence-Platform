@@ -22,6 +22,7 @@ import {
   Cell,
 } from 'recharts';
 import { useCarbonStore } from '@/store/carbon-store';
+import { ProfileBackground } from '@/components/backgrounds';
 import {
   Pencil,
   Check,
@@ -266,7 +267,7 @@ function SettingRow({
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  const { user, setSummary } = useCarbonStore();
+  const user = useCarbonStore((state) => state.user);
 
   const name          = user?.name          ?? 'Eco Warrior';
   const avatar        = user?.avatar        ?? '🌱';
@@ -343,10 +344,12 @@ export default function ProfilePage() {
   const challengesDone = badges.length;
 
   return (
-    <div
-      className="min-h-screen relative"
-      style={{ background: C.bg }}
-    >
+    <>
+      <ProfileBackground />
+      <div
+        className="min-h-screen relative"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
       {/* Warm ambient gradient */}
       <div
         className="fixed inset-0 pointer-events-none"
@@ -641,7 +644,7 @@ export default function ProfilePage() {
                     onChange={setYearGoalKg}
                   />
                   <p className="font-body text-[11px] mt-2" style={{ color: C.muted }}>
-                    That's ~{(yearGoalKg / 365).toFixed(1)} kg/day — equivalent to {yearGoalKg < 3000 ? 'well below' : 'slightly above'} the global average.
+                    That&apos;s ~{(yearGoalKg / 365).toFixed(1)} kg/day — equivalent to {yearGoalKg < 3000 ? 'well below' : 'slightly above'} the global average.
                   </p>
                 </div>
               </div>
@@ -929,6 +932,7 @@ export default function ProfilePage() {
           100% { top: 0%;   opacity: 0; }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }

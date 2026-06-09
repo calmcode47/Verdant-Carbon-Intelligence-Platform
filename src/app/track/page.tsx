@@ -8,10 +8,12 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCarbonStore } from '@/store/carbon-store';
 import { EMISSION_FACTORS, calculateCarbon } from '@/lib/carbon-calculator';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { TrackBackground } from '@/components/backgrounds';
+import { safeAsync } from '@/lib/errors';
 import { ActivityCategory, Activity } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -144,7 +146,22 @@ export default function TrackPage() {
   const [activeCategory, setActiveCategory] = useState<ActivityCategory>('transport');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('car_petrol');
   const [inputValue, setInputValue] = useState<string>('15');
+  const [calcValue, setCalcValue] = useState<string>('15');
   const [notes, setNotes] = useState<string>('');
+
+  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleValueChange = (value: string) => {
+    setInputValue(value); // update display immediately
+    clearTimeout(calcTimeoutRef.current);
+    calcTimeoutRef.current = setTimeout(() => {
+      setCalcValue(value);
+    }, 200);
+  };
+
+  useEffect(() => {
+    return () => clearTimeout(calcTimeoutRef.current);
+  }, []);
   
   // Custom states
   const [toasts, setToasts] = useState<{ id: string; message: string; sub: string }[]>([]);
@@ -170,10 +187,13 @@ export default function TrackPage() {
     if (defaultSub) {
       setSelectedSubCategory(defaultSub.subCategory);
       // set sensible default values based on category
-      if (activeCategory === 'transport') setInputValue('15');
-      else if (activeCategory === 'food') setInputValue('0.5');
-      else if (activeCategory === 'energy') setInputValue('10');
-      else setInputValue('1');
+      let val = '1';
+      if (activeCategory === 'transport') val = '15';
+      else if (activeCategory === 'food') val = '0.5';
+      else if (activeCategory === 'energy') val = '10';
+      
+      setInputValue(val);
+      setCalcValue(val);
     }
   }, [activeCategory]);
 
@@ -196,24 +216,35 @@ export default function TrackPage() {
         userId: 'user',
         category: cat,
         subCategory: subCat,
-        value: Number(inputValue) || 10,
+        value: Number(calcValue) || 10,
         unit: factor.unit,
-        carbonKg: calculateCarbon(subCat, Number(inputValue) || 10),
+        carbonKg: calculateCarbon(subCat, Number(calcValue) || 10),
         timestamp: new Date(),
         notes: 'Simulated for logging advice',
       };
 
-      const res = await fetch('/api/insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activities: [mockActivity, ...activities],
-          user: user || { monthlyBudgetKg: 400 },
-        }),
-      });
+      const [data, error] = await safeAsync(
+        fetch('/api/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activities: [mockActivity, ...activities],
+            user: user || { monthlyBudgetKg: 400 },
+          }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error('API request failed');
+          return res.json();
+        })
+      );
 
-      const data = await res.json();
-      if (data.insights && data.insights.length > 0) {
+      if (error) {
+        console.warn('AI API fail, using local matrix fallback:', error.message);
+        setAiTip(FALLBACK_TIPS[subCat] || "Reduce output parameters by optimizing schedules.");
+        setAiLoading(false);
+        return;
+      }
+
+      if (data && data.insights && data.insights.length > 0) {
         // Find if one matches the current category or subcategory
         const matchingInsight = data.insights.find((i: { category: string; description: string }) => i.category === cat) || data.insights[0];
         setAiTip(matchingInsight.description);
@@ -243,8 +274,8 @@ export default function TrackPage() {
   }, [selectedSubCategory]);
 
   const numericValue = useMemo(() => {
-    return Math.max(0, parseFloat(inputValue) || 0);
-  }, [inputValue]);
+    return Math.max(0, parseFloat(calcValue) || 0);
+  }, [calcValue]);
 
   const tempEmissions = useMemo(() => {
     return calculateCarbon(selectedSubCategory, numericValue);
@@ -255,9 +286,9 @@ export default function TrackPage() {
     setInputValue((prev) => {
       const current = parseFloat(prev) || 0;
       const updated = Math.max(0, current + amount);
-      // Clean display decimal representation
-      if (updated % 1 === 0) return updated.toString();
-      return Number(updated.toFixed(2)).toString();
+      const valStr = updated % 1 === 0 ? updated.toString() : Number(updated.toFixed(2)).toString();
+      setCalcValue(valStr);
+      return valStr;
     });
   };
 
@@ -273,6 +304,7 @@ export default function TrackPage() {
     setTimeout(() => {
       setSelectedSubCategory(preset.subCategory);
       setInputValue(preset.value.toString());
+      setCalcValue(preset.value.toString());
       showToast(`Preset Loaded`, `${preset.label}`);
     }, 50);
   };
@@ -280,7 +312,9 @@ export default function TrackPage() {
   // Form submission handler
   const handleLogActivity = (e: React.FormEvent) => {
     e.preventDefault();
-    if (numericValue <= 0) {
+    const finalNumericValue = Math.max(0, parseFloat(inputValue) || 0);
+    const finalEmissions = calculateCarbon(selectedSubCategory, finalNumericValue);
+    if (finalNumericValue <= 0) {
       showToast('Error', 'Input value must exceed zero.');
       return;
     }
@@ -290,15 +324,15 @@ export default function TrackPage() {
       userId: 'user',
       category: activeCategory,
       subCategory: selectedSubCategory,
-      value: numericValue,
+      value: finalNumericValue,
       unit: activeFactor.unit,
-      carbonKg: tempEmissions,
+      carbonKg: finalEmissions,
       timestamp: new Date(),
       notes: notes.trim() || undefined,
     };
 
     addActivity(newActivity);
-    showToast('Activity Logged', `${tempEmissions.toFixed(2)} kg CO₂ added`);
+    showToast('Activity Logged', `${finalEmissions.toFixed(2)} kg CO₂ added`);
     
     // Reset Form fields
     setNotes('');
@@ -364,7 +398,12 @@ export default function TrackPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#070B09] text-[#F0FFF4] font-mono py-8 px-4 sm:px-6 lg:px-8 relative selection:bg-[#00E676]/30 selection:text-white pb-24">
+      <>
+        <TrackBackground />
+        <div 
+          className="min-h-screen text-[#F0FFF4] font-mono py-8 px-4 sm:px-6 lg:px-8 relative selection:bg-[#00E676]/30 selection:text-white pb-24"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
         <div className="max-w-5xl mx-auto space-y-8 select-none">
           
           {/* ================= HERO TERMINAL BAR ================= */}
@@ -511,7 +550,7 @@ export default function TrackPage() {
                       min="0"
                       required
                       value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
+                      onChange={(e) => handleValueChange(e.target.value)}
                       className="bg-transparent border-none text-center font-mono font-bold text-4xl text-white w-24 focus:outline-none placeholder-slate-700 min-w-0"
                     />
                     <span className="text-sm font-mono text-slate-500 uppercase tracking-widest ml-1 select-none">
@@ -536,7 +575,7 @@ export default function TrackPage() {
                     max={activeCategory === 'transport' ? '200' : activeCategory === 'food' ? '5' : activeCategory === 'energy' ? '150' : '10'}
                     step={activeCategory === 'food' ? '0.05' : '1'}
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={(e) => handleValueChange(e.target.value)}
                     className="w-full h-1 bg-[#1A2420] rounded-lg appearance-none cursor-pointer accent-[#00E676] focus:outline-none"
                   />
                   <div className="flex justify-between text-[8px] text-slate-600 font-mono select-none">
@@ -779,7 +818,8 @@ export default function TrackPage() {
           </AnimatePresence>
         </div>
 
-      </div>
+        </div>
+      </>
     </PageTransition>
   );
 }

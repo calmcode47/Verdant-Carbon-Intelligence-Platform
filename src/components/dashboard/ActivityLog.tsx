@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useCarbonStore } from '@/store/carbon-store';
 import { EMISSION_FACTORS } from '@/lib/carbon-calculator';
 import { ActivityCategory, Activity } from '@/types';
@@ -25,8 +25,70 @@ const CATEGORIES: { id: ActivityCategory; label: string; icon: React.ComponentTy
   { id: 'lifestyle', label: 'Lifestyle', icon: ShoppingBag, color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-500/20' },
 ];
 
+interface ActivityLogItemProps {
+  act: Activity;
+  onRemove: (id: string) => void;
+}
+
+const ActivityLogItem = memo(function ActivityLogItem({ act, onRemove }: ActivityLogItemProps) {
+  const catMeta = CATEGORIES.find((c) => c.id === act.category) || CATEGORIES[0];
+  const factorMeta = EMISSION_FACTORS.find((f) => f.subCategory === act.subCategory);
+  const label = factorMeta?.label || act.subCategory;
+  const iconEmoji = factorMeta?.icon || '🌱';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center justify-between p-3 rounded-xl border border-slate-800/60 bg-slate-950/20 group hover:border-slate-700/80 transition-all"
+    >
+      <div className="flex items-center space-x-3">
+        <div className={`p-2 rounded-lg ${catMeta.bg} border text-base select-none`}>
+          {iconEmoji}
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-white">{label}</p>
+          <div className="flex items-center space-x-1.5 mt-0.5">
+            <span className="text-[10px] text-slate-400">
+              {act.value} {act.unit}
+            </span>
+            <span className="w-1 h-1 rounded-full bg-slate-800" />
+            <span className="text-[10px] text-slate-500 flex items-center">
+              <Calendar className="w-2.5 h-2.5 mr-0.5" />
+              {new Date(act.timestamp).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </div>
+          {act.notes && (
+            <p className="text-[10px] text-slate-500 italic mt-0.5">{act.notes}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-3">
+        <span className="text-xs font-bold text-slate-200">
+          {formatCarbon(act.carbonKg)}
+        </span>
+        <button
+          onClick={() => onRemove(act.id)}
+          className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all duration-200"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+ActivityLogItem.displayName = 'ActivityLogItem';
+
 export function ActivityLog() {
-  const { activities, addActivity, removeActivity } = useCarbonStore();
+  const activities = useCarbonStore((state) => state.activities);
+  const addActivity = useCarbonStore((state) => state.addActivity);
+  const removeActivity = useCarbonStore((state) => state.removeActivity);
   const [isOpen, setIsOpen] = useState(false);
   const [category, setCategory] = useState<ActivityCategory>('transport');
   const [subCategory, setSubCategory] = useState<string>('car_petrol');
@@ -204,60 +266,9 @@ export function ActivityLog() {
           ) : (
             <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
               <AnimatePresence initial={false}>
-                {activities.map((act) => {
-                  const catMeta = CATEGORIES.find((c) => c.id === act.category) || CATEGORIES[0];
-                  const factorMeta = EMISSION_FACTORS.find((f) => f.subCategory === act.subCategory);
-                  const label = factorMeta?.label || act.subCategory;
-                  const iconEmoji = factorMeta?.icon || '🌱';
-                  
-                  return (
-                    <motion.div
-                      key={act.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center justify-between p-3 rounded-xl border border-slate-800/60 bg-slate-950/20 group hover:border-slate-700/80 transition-all"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${catMeta.bg} border text-base select-none`}>
-                          {iconEmoji}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-white">{label}</p>
-                          <div className="flex items-center space-x-1.5 mt-0.5">
-                            <span className="text-[10px] text-slate-400">
-                              {act.value} {act.unit}
-                            </span>
-                            <span className="w-1 h-1 rounded-full bg-slate-800" />
-                            <span className="text-[10px] text-slate-500 flex items-center">
-                              <Calendar className="w-2.5 h-2.5 mr-0.5" />
-                              {new Date(act.timestamp).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </span>
-                          </div>
-                          {act.notes && (
-                            <p className="text-[10px] text-slate-500 italic mt-0.5">{act.notes}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <span className="text-xs font-bold text-slate-200">
-                          {formatCarbon(act.carbonKg)}
-                        </span>
-                        <button
-                          onClick={() => removeActivity(act.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all duration-200"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {activities.map((act) => (
+                  <ActivityLogItem key={act.id} act={act} onRemove={removeActivity} />
+                ))}
               </AnimatePresence>
             </div>
           )}

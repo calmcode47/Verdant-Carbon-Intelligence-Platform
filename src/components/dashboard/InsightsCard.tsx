@@ -12,14 +12,20 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui
 import { Button } from '../ui/Button';
 import { Sparkles, RefreshCcw, AlertTriangle, Trophy, Brain } from 'lucide-react';
 import React from 'react';
+import { safeAsync } from '@/lib/errors';
 
 export function InsightsCard() {
-  const { activities, user, insights, isLoading, setInsights, setLoading } = useCarbonStore();
+  const activities = useCarbonStore((state) => state.activities);
+  const user = useCarbonStore((state) => state.user);
+  const insights = useCarbonStore((state) => state.insights);
+  const isLoading = useCarbonStore((state) => state.isLoading);
+  const setInsights = useCarbonStore((state) => state.setInsights);
+  const setLoading = useCarbonStore((state) => state.setLoading);
 
   const fetchInsights = async () => {
     setLoading(true);
-    try {
-      const response = await fetch('/api/insights', {
+    const [data, error] = await safeAsync(
+      fetch('/api/insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,21 +34,22 @@ export function InsightsCard() {
           activities,
           user,
         }),
-      });
+      }).then(async (r) => {
+        if (!r.ok) throw new Error('Failed to generate insights');
+        return r.json();
+      })
+    );
 
-      if (!response.ok) {
-        throw new Error('Failed to generate insights');
-      }
-
-      const data = await response.json();
-      if (data.insights && Array.isArray(data.insights)) {
-        setInsights(data.insights);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
+    if (error) {
+      console.error('Insights fetch failed:', error.message);
       setLoading(false);
+      return;
     }
+
+    if (data && data.insights && Array.isArray(data.insights)) {
+      setInsights(data.insights);
+    }
+    setLoading(false);
   };
 
   const getInsightIcon = (type: string) => {

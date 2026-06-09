@@ -5,10 +5,12 @@ import { useFrame } from '@react-three/fiber';
 import { Sparkles, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useCarbonStore } from '@/store/carbon-store';
+import { useVisibilityPause } from '@/hooks/useVisibilityPause';
 
 export function EmissionGlobe() {
   const globeRef = useRef<THREE.Mesh>(null);
   const cloudRef = useRef<THREE.Points>(null);
+  const isVisible = useVisibilityPause();
   
   const activities = useCarbonStore((state) => state.activities);
   const totalEmissions = useCarbonStore((state) => state.user?.totalCarbonKg || 0);
@@ -23,6 +25,7 @@ export function EmissionGlobe() {
   }, [activities]);
 
   useFrame((state) => {
+    if (!isVisible) return;
     const elapsed = state.clock.getElapsedTime();
     if (globeRef.current) {
       globeRef.current.rotation.y = elapsed * rotationSpeed;
@@ -105,8 +108,10 @@ export function EmissionGlobe() {
 
       <OrbitControls
         enableZoom={false}
-        autoRotate={false}
+        autoRotate={true}
+        autoRotateSpeed={1.0}
         enablePan={false}
+        enableRotate={false}
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 1.5}
       />

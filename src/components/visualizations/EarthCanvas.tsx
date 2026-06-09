@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { EmissionGlobe } from './EmissionGlobe';
 import { Leaf } from 'lucide-react';
+import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { WebGLErrorBoundary } from '../three/WebGLErrorBoundary';
 
 export default function EarthCanvas() {
   const [mounted, setMounted] = useState(false);
@@ -38,12 +40,29 @@ export default function EarthCanvas() {
         <p className="text-[10px] font-mono text-slate-500">DRAG TO ROTATE</p>
       </div>
 
-      <Canvas
-        camera={{ position: [0, 0, 5.5], fov: 60 }}
-        gl={{ antialias: true }}
+      <div
+        role="img"
+        aria-label="Rotating Earth globe showing carbon emission zones"
+        style={{ width: '100%', height: '100%' }}
       >
-        <EmissionGlobe />
-      </Canvas>
+        <WebGLErrorBoundary>
+          <Canvas
+            camera={{ position: [0, 0, 5.5], fov: 60 }}
+            dpr={safePixelRatio()}
+            performance={{ min: 0.5, max: 1 }}
+            frameloop="always"
+            gl={{
+              antialias: getPerformanceTier() === 'HIGH',
+              alpha: true,
+              powerPreference: 'default',
+              stencil: false,
+              depth: true,
+            }}
+          >
+            <EmissionGlobe />
+          </Canvas>
+        </WebGLErrorBoundary>
+      </div>
     </div>
   );
 }

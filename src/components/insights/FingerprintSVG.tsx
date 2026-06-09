@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { useCarbonStore } from '@/store/carbon-store';
 
 export default function FingerprintSVG() {
-  const { summary } = useCarbonStore();
+  const summary = useCarbonStore((state) => state.summary);
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {

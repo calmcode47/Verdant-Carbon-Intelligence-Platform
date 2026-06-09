@@ -9,8 +9,21 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { safePixelRatio, getPerformanceTier, particleCount as getParticleCount } from '@/lib/performance';
 
-export default function ConstellationBackground() {
+interface ConstellationProps {
+  color?: string;
+  lineColor?: number;
+  backgroundColor?: string;
+  particleCount?: number;
+}
+
+export default function ConstellationBackground({
+  color = 'rgba(124, 58, 237, 0.4)',
+  lineColor = 0x7c3aed,
+  backgroundColor = '#06041A',
+  particleCount: customParticleCount
+}: ConstellationProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -29,15 +42,15 @@ export default function ConstellationBackground() {
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: getPerformanceTier() === 'HIGH',
       alpha: true,
       powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(safePixelRatio());
 
     // 2. Create Particles (1000 Stars)
-    const particleCount = 1000;
+    const particleCount = getParticleCount(customParticleCount ?? 1000);
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
 
@@ -69,7 +82,7 @@ export default function ConstellationBackground() {
     if (ctx) {
       const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
       grad.addColorStop(0, 'rgba(240, 244, 255, 1)');
-      grad.addColorStop(0.5, 'rgba(124, 58, 237, 0.4)');
+      grad.addColorStop(0.5, color);
       grad.addColorStop(1, 'rgba(6, 4, 26, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 16, 16);
@@ -96,7 +109,7 @@ export default function ConstellationBackground() {
 
     // Custom gradient line color: violet/teal
     const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0x7c3aed,
+      color: lineColor,
       transparent: true,
       opacity: 0.15,
       blending: THREE.AdditiveBlending,
@@ -156,7 +169,7 @@ export default function ConstellationBackground() {
       let lineIndex = 0;
 
       // We only check the first 250 particles to avoid O(N^2) bottlenecks
-      const checkCount = 250;
+      const checkCount = Math.min(250, particleCount);
       for (let i = 0; i < checkCount; i++) {
         const x1 = posArr[i * 3];
         const y1 = posArr[i * 3 + 1];
@@ -243,13 +256,14 @@ export default function ConstellationBackground() {
       dotTexture.dispose();
       renderer.dispose();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 w-full h-full -z-10 pointer-events-none overflow-hidden bg-[#06041A]"
-      style={{ mixBlendMode: 'screen' }}
+      className="fixed inset-0 w-full h-full -z-10 pointer-events-none overflow-hidden"
+      style={{ mixBlendMode: 'screen', backgroundColor }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
     </div>

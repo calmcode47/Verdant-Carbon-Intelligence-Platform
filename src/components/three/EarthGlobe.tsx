@@ -1,183 +1,425 @@
-/**
- * @file EarthGlobe.tsx
- * @description 3D WebGL Earth Globe component for the Hero section background.
- * Generates a procedural landmass texture using canvas pixel noise, adds a surrounding halo
- * atmosphere, and renders a floating 2000-particle system of red CO2 particles that fall
- * towards the Earth during scrolling to create a parallax effect.
- */
-
 'use client';
 
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useVisibilityPause } from '@/hooks/useVisibilityPause';
+import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
-export default function EarthGlobe() {
-  const globeRef = useRef<THREE.Mesh>(null);
-  const atmosphereRef = useRef<THREE.Mesh>(null);
-  const particlesRef = useRef<THREE.Points>(null);
+// ─── Seeded pseudo-random ────────────────────────────────────────────────────
+function createRng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = Math.imul(s ^ (s >>> 17), 0x9e3779b9) >>> 0;
+    s = Math.imul(s ^ (s >>> 13), 0x6c62272e) >>> 0;
+    return (s ^ (s >>> 16)) / 4294967296;
+  };
+}
 
-  // Generate a procedural Earth texture to guarantee self-containment
-  const earthTexture = useMemo(() => {
-    if (typeof window === 'undefined') return null;
+// ─── Smooth value noise on a sphere ─────────────────────────────────────────
+function smoothNoise(cx: number, cy: number, cz: number, scale: number): number {
+  return (
+    Math.sin(cx * scale + 1.2) * Math.cos(cy * scale * 0.9) +
+    Math.sin(cy * scale * 1.1 + 2.4) * Math.cos(cz * scale * 0.8) +
+    Math.sin(cz * scale * 0.95 + 3.7) * Math.cos(cx * scale * 1.05)
+  ) / 3;
+}
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+function fbm(cx: number, cy: number, cz: number): number {
+  let v = 0, amp = 0.5, freq = 1;
+  for (let o = 0; o < 5; o++) {
+    v += smoothNoise(cx, cy, cz, freq * 3.8) * amp;
+    amp *= 0.52;
+    freq *= 1.95;
+  }
+  return v;
+}
 
-    // Fill ocean (deep space black-blue)
-    ctx.fillStyle = '#050a15';
-    ctx.fillRect(0, 0, 1024, 512);
+// ─── Build textures using ImageData (smooth pixels, no fillRect banding) ────
+function buildEarthTextures(): {
+  color: THREE.CanvasTexture;
+  roughness: THREE.CanvasTexture;
+  clouds: THREE.CanvasTexture;
+} {
+  const W = 2048, H = 1024;
 
-    // Draw procedural continents using fractal sine/cosine frequencies
-    for (let y = 0; y < 512; y += 2) {
-      for (let x = 0; x < 1024; x += 2) {
-        const lon = (x / 1024) * Math.PI * 2;
-        const lat = (y / 512) * Math.PI - Math.PI / 2;
+  // --- Day / color map ---
+  const colorCanvas = document.createElement('canvas');
+  colorCanvas.width = W; colorCanvas.height = H;
+  const colorCtx = colorCanvas.getContext('2d')!;
+  const colorImg = colorCtx.createImageData(W, H);
+  const cd = colorImg.data;
 
-        const dx = Math.cos(lat) * Math.cos(lon);
-        const dy = Math.cos(lat) * Math.sin(lon);
-        const dz = Math.sin(lat);
+  // --- Roughness map (ocean=smooth/shiny, land=rough/matte) ---
+  const roughCanvas = document.createElement('canvas');
+  roughCanvas.width = W; roughCanvas.height = H;
+  const roughCtx = roughCanvas.getContext('2d')!;
+  const roughImg = roughCtx.createImageData(W, H);
+  const rd = roughImg.data;
 
-        // Sinusoidal noise waves simulating landmass clusters
-        const n =
-          Math.sin(dx * 4) * Math.cos(dy * 4) +
-          Math.sin(dz * 5) * Math.cos(dx * 2) +
-          Math.sin(dy * 6) * Math.sin(dz * 3);
+  for (let py = 0; py < H; py++) {
+    const lat = (py / H) * Math.PI - Math.PI / 2; // −π/2 → π/2
+    const sinLat = Math.sin(lat);
+    const cosLat = Math.cos(lat);
 
-        if (n > 0.05) {
-          // Draw electric green land dot
-          ctx.fillStyle = '#00E676';
-          ctx.fillRect(x, y, 2, 2);
-        } else if (n > -0.1) {
-          // Draw a transition shoreline (nebula blue)
-          ctx.fillStyle = '#1565C0';
-          ctx.fillRect(x, y, 1, 1);
+    for (let px = 0; px < W; px++) {
+      const lon = (px / W) * Math.PI * 2;
+      const cx = cosLat * Math.cos(lon);
+      const cy = cosLat * Math.sin(lon);
+      const cz = sinLat;
+
+      // fBm elevation
+      const elev = fbm(cx, cy, cz);
+
+      // Polar cap blend (smooth sigmoid)
+      const absLat = Math.abs(lat);
+      const iceFactor = Math.max(0, (absLat - 1.22) / 0.35); // smooth fade above ~70°
+      const iceBlend  = Math.min(1, iceFactor * iceFactor * (3 - 2 * iceFactor));
+
+      const i = (py * W + px) * 4;
+
+      let r: number, g: number, b: number, roughVal: number;
+
+      if (iceBlend > 0.5) {
+        // ── Ice / polar caps ──────────────────────────────────────────────
+        const t = (iceBlend - 0.5) * 2; // 0→1
+        r = Math.round(215 + t * 35);
+        g = Math.round(225 + t * 25);
+        b = Math.round(240 + t * 15);
+        roughVal = 220;
+      } else {
+        // Mix between ocean and land using elevation
+        const isLand = elev > 0.03;
+
+        if (isLand) {
+          // ── Land ─────────────────────────────────────────────────────────
+          const t = Math.min((elev - 0.03) / 0.55, 1); // 0=lowland, 1=highland
+
+          // Lowland: tropical/forest green → highland: rocky brown → snow peaks
+          if (t < 0.45) {
+            // Forest / lowland green
+            const s = t / 0.45;
+            r = Math.round(18 + s * 35);
+            g = Math.round(95 + s * 65);
+            b = Math.round(28 + s * 20);
+          } else if (t < 0.75) {
+            // Highland scrub / savanna
+            const s = (t - 0.45) / 0.30;
+            r = Math.round(53 + s * 85);
+            g = Math.round(160 - s * 60);
+            b = Math.round(48 - s * 18);
+          } else {
+            // Mountain / snow cap
+            const s = Math.min((t - 0.75) / 0.25, 1);
+            r = Math.round(138 + s * 100);
+            g = Math.round(100 + s * 120);
+            b = Math.round(30  + s * 180);
+          }
+
+          // Mix in polar ice for high-latitude land
+          if (iceBlend > 0.05) {
+            const iM = iceBlend * 2;
+            r = Math.round(r + (230 - r) * iM);
+            g = Math.round(g + (235 - g) * iM);
+            b = Math.round(b + (245 - b) * iM);
+          }
+
+          roughVal = 200 + Math.round(t * 45); // land = rough
+
+        } else {
+          // ── Ocean ─────────────────────────────────────────────────────────
+          const depth = Math.min(1, (0.03 - elev) / 0.55);
+
+          // Coast shallow → deep ocean
+          if (depth < 0.25) {
+            const s = depth / 0.25;
+            r = Math.round(14  + s * 8);
+            g = Math.round(100 + s * 30);
+            b = Math.round(155 + s * 40);
+          } else {
+            const s = Math.min((depth - 0.25) / 0.75, 1);
+            r = Math.round(22  - s * 10);
+            g = Math.round(130 - s * 70);
+            b = Math.round(195 - s * 90);
+          }
+
+          roughVal = 18; // ocean = very smooth / specular
         }
       }
-    }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
+      cd[i]     = r;
+      cd[i + 1] = g;
+      cd[i + 2] = b;
+      cd[i + 3] = 255;
+
+      rd[i]     = roughVal;
+      rd[i + 1] = roughVal;
+      rd[i + 2] = roughVal;
+      rd[i + 3] = 255;
+    }
+  }
+
+  colorCtx.putImageData(colorImg, 0, 0);
+  roughCtx.putImageData(roughImg, 0, 0);
+
+  // --- Cloud layer ---
+  const cloudW = 1024, cloudH = 512;
+  const cloudCanvas = document.createElement('canvas');
+  cloudCanvas.width = cloudW; cloudCanvas.height = cloudH;
+  const cloudCtx = cloudCanvas.getContext('2d')!;
+  const cloudImg = cloudCtx.createImageData(cloudW, cloudH);
+  const cloudD = cloudImg.data;
+  const rng = createRng(17);
+
+  for (let py = 0; py < cloudH; py++) {
+    const lat = (py / cloudH) * Math.PI - Math.PI / 2;
+    const cosLat = Math.cos(lat);
+    const sinLat = Math.sin(lat);
+    for (let px = 0; px < cloudW; px++) {
+      const lon = (px / cloudW) * Math.PI * 2;
+      const cx = cosLat * Math.cos(lon);
+      const cy = cosLat * Math.sin(lon);
+      const cz = sinLat;
+
+      // Separate fBm for clouds, offset from terrain
+      const c1 = fbm(cx + 10, cy + 5, cz + 7);
+      const c2 = fbm(cx * 1.3 + 8, cy * 0.8 - 4, cz * 1.1 + 2);
+      const cloud = (c1 * 0.6 + c2 * 0.4 + rng() * 0.06);
+
+      const visible = Math.max(0, Math.min(1, (cloud - 0.04) * 5.5));
+      const ci = (py * cloudW + px) * 4;
+      const cv2 = Math.round(visible * 255);
+      cloudD[ci]     = 255;
+      cloudD[ci + 1] = 255;
+      cloudD[ci + 2] = 255;
+      cloudD[ci + 3] = cv2;
+    }
+  }
+
+  cloudCtx.putImageData(cloudImg, 0, 0);
+
+  const mkTex = (c: HTMLCanvasElement) => {
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.ClampToEdgeWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    return t;
+  };
+
+  return {
+    color:    mkTex(colorCanvas),
+    roughness: mkTex(roughCanvas),
+    clouds:   mkTex(cloudCanvas),
+  };
+}
+
+// ─── Star field geometry ─────────────────────────────────────────────────────
+function buildStars(count: number): Float32Array {
+  const rng = createRng(99);
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const r     = 14 + rng() * 22;
+    const theta = rng() * Math.PI * 2;
+    const phi   = Math.acos(2 * rng() - 1);
+    pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3 + 2] = r * Math.cos(phi);
+  }
+  return pos;
+}
+
+// ─── Scene component ─────────────────────────────────────────────────────────
+function GlobeScene() {
+  const globeRef  = useRef<THREE.Mesh>(null);
+  const cloudRef  = useRef<THREE.Mesh>(null);
+  const atmos1Ref = useRef<THREE.Mesh>(null);
+  const atmos2Ref = useRef<THREE.Mesh>(null);
+  const starsRef  = useRef<THREE.Points>(null);
+  const ringRef   = useRef<THREE.Mesh>(null);
+
+  const isVisible = useVisibilityPause();
+  const tier      = getPerformanceTier();
+  const segments  = tier === 'HIGH' ? 96 : 56;
+
+  // Mouse
+  const mouse   = useRef({ x: 0, y: 0 });
+  const smoothM = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const h = (e: MouseEvent) => {
+      mouse.current.x = ((e.clientX / window.innerWidth)  * 2 - 1) * 0.5;
+      mouse.current.y = ((e.clientY / window.innerHeight) * 2 - 1) * 0.18;
+    };
+    window.addEventListener('mousemove', h, { passive: true });
+    return () => window.removeEventListener('mousemove', h);
   }, []);
 
-  // Create particle positions for the floating CO2 system (2000 items)
-  const [particlePositions, particleSpeeds] = useMemo(() => {
-    const count = 2000;
-    const positions = new Float32Array(count * 3);
-    const speeds = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      // Place particles in a spherical shell around the Earth (radius 1.4 to 2.2)
-      const u = Math.random();
-      const v = Math.random();
-      const theta = u * 2.0 * Math.PI;
-      const phi = Math.acos(2.0 * v - 1.0);
-      const r = 1.4 + Math.random() * 0.8;
-
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = r * Math.cos(phi);
-
-      speeds[i] = 0.2 + Math.random() * 0.8;
-    }
-
-    return [positions, speeds];
+  // Textures (computed once, off the main thread in useMemo)
+  const textures = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return buildEarthTextures();
   }, []);
 
-  useFrame((state) => {
-    const elapsed = state.clock.getElapsedTime();
-    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
+  const starPos = useMemo(() => buildStars(tier === 'HIGH' ? 3000 : 1500), [tier]);
 
-    // Slow Earth rotation: 0.001 rad/frame
+  // Animation
+  useFrame((_, dt) => {
+    if (!isVisible) return;
+    const lf = 0.035; // lerp factor
+    smoothM.current.x += (mouse.current.x - smoothM.current.x) * lf;
+    smoothM.current.y += (mouse.current.y - smoothM.current.y) * lf;
+
     if (globeRef.current) {
-      globeRef.current.rotation.y = elapsed * 0.06;
+      globeRef.current.rotation.y += dt * 0.045;
+      globeRef.current.rotation.x = THREE.MathUtils.lerp(
+        globeRef.current.rotation.x, smoothM.current.y, 0.05
+      );
     }
-
-    if (atmosphereRef.current) {
-      atmosphereRef.current.rotation.y = elapsed * 0.06;
+    // Clouds drift slightly faster than surface
+    if (cloudRef.current) {
+      cloudRef.current.rotation.y  = (globeRef.current?.rotation.y ?? 0) + dt * 0.012;
+      cloudRef.current.rotation.x  = globeRef.current?.rotation.x ?? 0;
     }
-
-    // Floating CO2 particles update & parallax fall
-    if (particlesRef.current) {
-      // Slow rotation of the particle sphere
-      particlesRef.current.rotation.y = elapsed * 0.03;
-      particlesRef.current.rotation.x = elapsed * 0.01;
-
-      // Parallax shift based on scroll
-      particlesRef.current.position.y = -scrollY * 0.0012;
-
-      // Bobbing particles to simulate float
-      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-      const count = positions.length / 3;
-
-      for (let i = 0; i < count; i++) {
-        const speed = particleSpeeds[i];
-        // Apply tiny sinusoidal displacement
-        positions[i * 3 + 1] += Math.sin(elapsed * speed + i) * 0.0003;
-      }
-      particlesRef.current.geometry.attributes.position.needsUpdate = true;
+    // Atmospheres follow globe
+    if (atmos1Ref.current) atmos1Ref.current.rotation.copy(globeRef.current?.rotation ?? new THREE.Euler());
+    if (atmos2Ref.current) atmos2Ref.current.rotation.copy(globeRef.current?.rotation ?? new THREE.Euler());
+    // Orbital ring tilts slightly with mouse
+    if (ringRef.current) {
+      ringRef.current.rotation.z += dt * 0.014;
+      ringRef.current.rotation.x = THREE.MathUtils.lerp(ringRef.current.rotation.x, 0.44 + smoothM.current.y * 0.5, 0.04);
     }
+    if (starsRef.current) starsRef.current.rotation.y += dt * 0.0025;
   });
 
   return (
-    <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 3, 5]} intensity={1.5} color="#F8F9FF" />
-      <directionalLight position={[-5, -3, -5]} intensity={0.4} color="#1565C0" />
+    <group>
+      {/* ── Lighting ─────────────────────────────────────────────────────── */}
+      <ambientLight intensity={0.28} />
+      {/* Sun — warm directional from upper-right front */}
+      <directionalLight position={[8, 3, 6]}  intensity={2.2} color="#FFF5E8" castShadow={false} />
+      {/* Blue space fill from the opposite side */}
+      <directionalLight position={[-6, -2, -5]} intensity={0.18} color="#2255BB" />
 
-      {/* Earth Sphere */}
+      {/* ── Stars ────────────────────────────────────────────────────────── */}
+      <points ref={starsRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[starPos, 3]} />
+        </bufferGeometry>
+        <pointsMaterial size={0.06} color="#D8E8FF" transparent opacity={0.9} sizeAttenuation depthWrite={false} />
+      </points>
+
+      {/* ── Outer atmospheric haze (back-lit blue Rayleigh rim) ────────── */}
+      <mesh ref={atmos2Ref}>
+        <sphereGeometry args={[1.32, 64, 64]} />
+        <meshBasicMaterial
+          color="#0044BB" transparent opacity={0.055}
+          blending={THREE.AdditiveBlending} side={THREE.BackSide} depthWrite={false}
+        />
+      </mesh>
+
+      {/* ── Inner atmosphere (soft green glow on earth edge) ─────────── */}
+      <mesh ref={atmos1Ref}>
+        <sphereGeometry args={[1.16, 64, 64]} />
+        <meshBasicMaterial
+          color="#00CC66" transparent opacity={0.07}
+          blending={THREE.AdditiveBlending} side={THREE.BackSide} depthWrite={false}
+        />
+      </mesh>
+
+      {/* ── Earth sphere ─────────────────────────────────────────────────── */}
       <mesh ref={globeRef}>
-        <sphereGeometry args={[1, 64, 64]} />
-        {earthTexture ? (
+        <sphereGeometry args={[1.1, segments, segments]} />
+        {textures ? (
           <meshStandardMaterial
-            map={earthTexture}
-            roughness={0.7}
-            metalness={0.1}
+            map={textures.color}
+            roughnessMap={textures.roughness}
+            roughness={1}
+            metalness={0.0}
+            envMapIntensity={0.4}
           />
         ) : (
-          <meshStandardMaterial
-            color="#050a15"
-            roughness={0.7}
-            metalness={0.1}
-            wireframe
-          />
+          <meshStandardMaterial color="#0a1628" roughness={0.8} metalness={0.0} />
         )}
       </mesh>
 
-      {/* Atmospheric Glow */}
-      <mesh ref={atmosphereRef}>
-        <sphereGeometry args={[1.04, 32, 32]} />
+      {/* ── Cloud layer ──────────────────────────────────────────────────── */}
+      {textures && (
+        <mesh ref={cloudRef}>
+          <sphereGeometry args={[1.115, segments, segments]} />
+          <meshStandardMaterial
+            alphaMap={textures.clouds}
+            transparent
+            opacity={0.88}
+            color="#FFFFFF"
+            roughness={1}
+            metalness={0}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* ── Thin orbital ring ─────────────────────────────────────────────── */}
+      <mesh ref={ringRef} rotation={[Math.PI / 2.3, 0, 0]}>
+        <torusGeometry args={[1.78, 0.0025, 8, 220]} />
         <meshBasicMaterial
-          color="#00E676"
-          transparent
-          opacity={0.12}
-          blending={THREE.AdditiveBlending}
-          side={THREE.BackSide}
+          color="#00E676" transparent opacity={0.30}
+          blending={THREE.AdditiveBlending} depthWrite={false}
         />
       </mesh>
 
-      {/* Floating Red CO2 Particles */}
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[particlePositions, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.018}
-          color="#FF5252"
-          transparent
-          opacity={0.75}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
+      {/* ── Second faint tilted ring ────────────────────────────────────── */}
+      <mesh rotation={[Math.PI / 4, 0.4, 0.1]}>
+        <torusGeometry args={[2.1, 0.0015, 8, 220]} />
+        <meshBasicMaterial
+          color="#1DE9B6" transparent opacity={0.10}
+          blending={THREE.AdditiveBlending} depthWrite={false}
         />
-      </points>
-    </>
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Fallback ────────────────────────────────────────────────────────────────
+export function EarthGlobeFallback() {
+  return (
+    <div
+      role="img"
+      aria-label="Earth illustration"
+      style={{
+        width: 300, height: 300, borderRadius: '50%',
+        background: 'radial-gradient(circle at 38% 35%, #1a6e30 0%, #0d3820 40%, #060f18 100%)',
+        boxShadow: '0 0 80px rgba(0,230,118,0.15), 0 0 180px rgba(0,230,118,0.05), inset -25px -25px 80px rgba(0,0,0,0.6)',
+        border: '1px solid rgba(0,230,118,0.15)',
+      }}
+    />
+  );
+}
+
+// ─── Root export ─────────────────────────────────────────────────────────────
+export default function EarthGlobe() {
+  const tier = getPerformanceTier();
+  if (tier === 'LOW') return <EarthGlobeFallback />;
+
+  return (
+    <WebGLErrorBoundary>
+      <Canvas
+        dpr={safePixelRatio()}
+        camera={{ position: [0, 0, 3.5], fov: 42 }}
+        frameloop="always"
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
+          stencil: false,
+          depth: true,
+        }}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <GlobeScene />
+      </Canvas>
+    </WebGLErrorBoundary>
   );
 }

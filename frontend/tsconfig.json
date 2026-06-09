@@ -22,8 +22,29 @@
       }
     ],
     "paths": {
+      "zod": [
+        "./node_modules/zod"
+      ],
+      "@google/genai": [
+        "./node_modules/@google/genai"
+      ],
+      "@neondatabase/serverless": [
+        "./node_modules/@neondatabase/serverless"
+      ],
+      "drizzle-orm": [
+        "./node_modules/drizzle-orm"
+      ],
+      "drizzle-orm/*": [
+        "./node_modules/drizzle-orm/*"
+      ],
+      "next": [
+        "./node_modules/next"
+      ],
+      "next/*": [
+        "./node_modules/next/*"
+      ],
       "@/backend/*": [
-        "./backend/*"
+        "../backend/*"
       ],
       "@/*": [
         "./src/*"

@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -13,6 +15,10 @@ const nextConfig = {
     if (isServer) {
       config.externals = [...(config.externals ?? []), 'canvas'];
     }
+    config.resolve.modules = [
+      ...(config.resolve.modules || []),
+      path.resolve(__dirname, 'node_modules'),
+    ];
     return config;
   },
 

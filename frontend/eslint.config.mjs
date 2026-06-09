@@ -18,6 +18,12 @@ const eslintConfig = [
     },
   },
   {
+    files: ['*.js', '*.cjs', '*.mjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     ignores: ['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts'],
   },
 ];

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSnapshot } from '@/server/services/carbon-service';
-import { attachSessionCookie, getClientKey, getSession } from '@/server/api/session';
-import { errorResponse } from '@/server/api/http';
-import { assertRateLimit } from '@/server/services/rate-limit-service';
+import { getSnapshot } from '@/backend/services/carbon-service';
+import { attachSessionCookie, getClientKey, getSession } from '@/backend/api/session';
+import { errorResponse } from '@/backend/api/http';
+import { assertRateLimit } from '@/backend/services/rate-limit-service';
 
 export const runtime = 'nodejs';
 

@@ -10,7 +10,7 @@ import { persist } from 'zustand/middleware';
 import { Activity, UserProfile, AIInsight, Challenge, CarbonSummary, LeaderboardEntry } from '@/types';
 import { calculateCarbon, getXPForActivity } from '@/lib/carbon-calculator';
 import { CreateActivityPayload, normalizeSnapshot, verdantApi } from '@/lib/api-client';
-import type { AppSnapshot } from '@/server/services/types';
+import type { AppSnapshot } from '@/backend/services/types';
 
 interface CarbonStore {
   user: UserProfile | null;

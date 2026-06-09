@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSnapshot, updateUser } from '@/server/services/carbon-service';
-import { updateUserSchema } from '@/server/api/validation';
-import { attachSessionCookie, getClientKey, getSession } from '@/server/api/session';
-import { errorResponse, parseJson } from '@/server/api/http';
-import { assertRateLimit } from '@/server/services/rate-limit-service';
+import { getSnapshot, updateUser } from '@/backend/services/carbon-service';
+import { updateUserSchema } from '@/backend/api/validation';
+import { attachSessionCookie, getClientKey, getSession } from '@/backend/api/session';
+import { errorResponse, parseJson } from '@/backend/api/http';
+import { assertRateLimit } from '@/backend/services/rate-limit-service';
 
 export const runtime = 'nodejs';
 

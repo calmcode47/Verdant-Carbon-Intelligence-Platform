@@ -2,10 +2,10 @@ import { randomUUID } from 'crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import { Activity, ActivityCategory, Badge, Challenge, LeaderboardEntry, UserProfile } from '@/types';
 import { calculateCarbon, EMISSION_FACTORS, getXPForActivity } from '@/lib/carbon-calculator';
-import { getDb } from '@/server/db/client';
-import { ensureDatabase } from '@/server/db/bootstrap';
-import { activities, badges, challenges, DbActivity, DbBadge, DbChallenge, DbUser, users } from '@/server/db/schema';
-import { CreateActivityInput, InsightInput, UpdateUserInput } from '@/server/api/validation';
+import { getDb } from '@/backend/db/client';
+import { ensureDatabase } from '@/backend/db/bootstrap';
+import { activities, badges, challenges, DbActivity, DbBadge, DbChallenge, DbUser, users } from '@/backend/db/schema';
+import { CreateActivityInput, InsightInput, UpdateUserInput } from '@/backend/api/validation';
 import { AppSnapshot } from './types';
 
 const DEFAULT_BADGE: Badge = {

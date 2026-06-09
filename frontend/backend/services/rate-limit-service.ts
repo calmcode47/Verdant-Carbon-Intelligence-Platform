@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
-import { ensureDatabase } from '@/server/db/bootstrap';
-import { getDb } from '@/server/db/client';
-import { rateLimits } from '@/server/db/schema';
+import { ensureDatabase } from '@/backend/db/bootstrap';
+import { getDb } from '@/backend/db/client';
+import { rateLimits } from '@/backend/db/schema';
 
 const memory = new Map<string, { count: number; resetAt: number }>();
 

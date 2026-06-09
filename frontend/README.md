@@ -217,6 +217,8 @@ Zustand Store (hydrated from backend; cached in localStorage)
 | **Vercel** | Production hosting |
 | **localStorage** | Short-lived offline/demo cache via Zustand persist middleware |
 
+Backend implementation files live in `frontend/backend`, while `frontend/src/app/api/*` contains the thin Next.js route-handler entrypoints required by the App Router.
+
 ### Required Environment Variables
 
 ```bash

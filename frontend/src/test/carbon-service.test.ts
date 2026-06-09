@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Activity } from '@/types';
-import { calculateSummary } from '@/server/services/carbon-service';
+import { calculateSummary } from '@/backend/services/carbon-service';
 
 describe('calculateSummary', () => {
   it('aggregates activity emissions across time windows and categories', () => {

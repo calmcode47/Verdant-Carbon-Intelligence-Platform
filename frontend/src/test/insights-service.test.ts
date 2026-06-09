@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { generateInsights } from '@/server/services/insights-service';
+import { generateInsights } from '@/backend/services/insights-service';
 
 describe('generateInsights', () => {
   it('returns structured deterministic fallback insights without an API key', async () => {

@@ -1,5 +1,5 @@
 import { Activity, AIInsight, Challenge, UserProfile } from '@/types';
-import type { AppSnapshot } from '@/server/services/types';
+import type { AppSnapshot } from '@/backend/services/types';
 
 export type CreateActivityPayload = {
   category: Activity['category'];

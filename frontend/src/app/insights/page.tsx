@@ -16,7 +16,7 @@ import { WebGLErrorBoundary } from '@/components/three/WebGLErrorBoundary';
 import { useCarbonStore } from '@/store/carbon-store';
 import { useIsInView } from '@/hooks/useIsInView';
 import { safeAsync } from '@/lib/errors';
-import { ActivityCategory, AIInsight, Challenge } from '@/types';
+import { ActivityCategory, AIInsight } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
@@ -163,7 +163,7 @@ export default function InsightsPage() {
   const activities = useCarbonStore((state) => state.activities);
   const summary = useCarbonStore((state) => state.summary);
   const challenges = useCarbonStore((state) => state.challenges);
-  const setChallenges = useCarbonStore((state) => state.setChallenges);
+  const createChallengeFromInsight = useCarbonStore((state) => state.createChallengeFromInsight);
   const { ref: radarChartRef, inView: radarChartInView } = useIsInView();
   const { ref: barChartRef, inView: barChartInView } = useIsInView();
 
@@ -240,7 +240,7 @@ export default function InsightsPage() {
   };
 
   // 4. Create Challenge from Insight Tip
-  const applyInsightAsChallenge = (insight: AIInsight) => {
+  const applyInsightAsChallenge = async (insight: AIInsight) => {
     // Check if challenge already exists
     const exists = challenges.some(c => c.title === insight.title);
     if (exists) {
@@ -248,22 +248,12 @@ export default function InsightsPage() {
       return;
     }
 
-    const newChallenge: Challenge = {
-      id: `c_ai_${Date.now()}`,
-      title: insight.title,
-      description: insight.description,
-      category: insight.category,
-      targetReductionKg: insight.potentialSavingKg,
-      currentProgressKg: 0,
-      duration: 'weekly',
-      xpReward: Math.round(insight.potentialSavingKg * 10) + 120,
-      participants: Math.floor(Math.random() * 500) + 120,
-      status: 'active',
-      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    };
-
-    setChallenges([...challenges, newChallenge]);
-    triggerToast(`Added challenge: "${insight.title}" (+${newChallenge.xpReward} XP)`);
+    try {
+      await createChallengeFromInsight(insight);
+      triggerToast(`Added challenge: "${insight.title}"`);
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to create challenge.');
+    }
   };
 
   // 5. Send Chat Message
@@ -600,7 +590,9 @@ export default function InsightsPage() {
                             </span>
                           </div>
                           <button
-                            onClick={() => applyInsightAsChallenge(insight)}
+                            onClick={() => {
+                              applyInsightAsChallenge(insight);
+                            }}
                             className="bg-[#00E5FF]/10 border border-[#00E5FF]/30 hover:bg-[#00E5FF] hover:text-black text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer flex items-center space-x-1"
                           >
                             <span>APPLY THIS</span>

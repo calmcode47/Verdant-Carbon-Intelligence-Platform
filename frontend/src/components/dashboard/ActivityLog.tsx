@@ -87,8 +87,8 @@ ActivityLogItem.displayName = 'ActivityLogItem';
 
 export function ActivityLog() {
   const activities = useCarbonStore((state) => state.activities);
-  const addActivity = useCarbonStore((state) => state.addActivity);
-  const removeActivity = useCarbonStore((state) => state.removeActivity);
+  const createActivity = useCarbonStore((state) => state.createActivity);
+  const deleteActivity = useCarbonStore((state) => state.deleteActivity);
   const [isOpen, setIsOpen] = useState(false);
   const [category, setCategory] = useState<ActivityCategory>('transport');
   const [subCategory, setSubCategory] = useState<string>('car_petrol');
@@ -110,23 +110,17 @@ export function ActivityLog() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subCategory || !amount || parseFloat(amount) <= 0 || !currentFactor) return;
 
-    const newActivity: Activity = {
-      id: Math.random().toString(36).substring(2, 9),
-      userId: 'user',
+    await createActivity({
       category,
       subCategory,
       value: parseFloat(amount),
-      unit: currentFactor.unit,
-      carbonKg: 0, // Recalculated reactively in the store
       timestamp: new Date(date),
       notes: notes || undefined,
-    };
-
-    addActivity(newActivity);
+    });
 
     // Reset Form
     setAmount('');
@@ -267,7 +261,11 @@ export function ActivityLog() {
             <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
               <AnimatePresence initial={false}>
                 {activities.map((act) => (
-                  <ActivityLogItem key={act.id} act={act} onRemove={removeActivity} />
+                  <ActivityLogItem key={act.id} act={act} onRemove={(id) => {
+                    deleteActivity(id).catch((error) => {
+                      console.error('Delete activity failed:', error instanceof Error ? error.message : error);
+                    });
+                  }} />
                 ))}
               </AnimatePresence>
             </div>

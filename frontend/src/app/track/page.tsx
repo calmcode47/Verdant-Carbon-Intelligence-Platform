@@ -14,7 +14,7 @@ import { EMISSION_FACTORS, calculateCarbon } from '@/lib/carbon-calculator';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { TrackBackground } from '@/components/backgrounds';
 import { safeAsync } from '@/lib/errors';
-import { ActivityCategory, Activity } from '@/types';
+import { ActivityCategory } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trash2, 
@@ -173,8 +173,8 @@ export default function TrackPage() {
   const user = useCarbonStore((state) => state.user);
   const activities = useCarbonStore((state) => state.activities);
   const summary = useCarbonStore((state) => state.summary);
-  const addActivity = useCarbonStore((state) => state.addActivity);
-  const removeActivity = useCarbonStore((state) => state.removeActivity);
+  const createActivity = useCarbonStore((state) => state.createActivity);
+  const deleteActivity = useCarbonStore((state) => state.deleteActivity);
 
   // Seeding trigger inside empty tracker page
   useEffect(() => {
@@ -310,7 +310,7 @@ export default function TrackPage() {
   };
 
   // Form submission handler
-  const handleLogActivity = (e: React.FormEvent) => {
+  const handleLogActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalNumericValue = Math.max(0, parseFloat(inputValue) || 0);
     const finalEmissions = calculateCarbon(selectedSubCategory, finalNumericValue);
@@ -319,23 +319,18 @@ export default function TrackPage() {
       return;
     }
 
-    const newActivity: Activity = {
-      id: `act-${Date.now()}`,
-      userId: 'user',
-      category: activeCategory,
-      subCategory: selectedSubCategory,
-      value: finalNumericValue,
-      unit: activeFactor.unit,
-      carbonKg: finalEmissions,
-      timestamp: new Date(),
-      notes: notes.trim() || undefined,
-    };
-
-    addActivity(newActivity);
-    showToast('Activity Logged', `${finalEmissions.toFixed(2)} kg CO₂ added`);
-    
-    // Reset Form fields
-    setNotes('');
+    try {
+      await createActivity({
+        category: activeCategory,
+        subCategory: selectedSubCategory,
+        value: finalNumericValue,
+        notes: notes.trim() || undefined,
+      });
+      showToast('Activity Logged', `${finalEmissions.toFixed(2)} kg CO₂ added`);
+      setNotes('');
+    } catch (error) {
+      showToast('Sync Error', error instanceof Error ? error.message : 'Unable to log activity.');
+    }
   };
 
   // Date/Time Formatter
@@ -760,7 +755,9 @@ export default function TrackPage() {
                                 <div className="flex items-center justify-center space-x-2">
                                   <button
                                     onClick={() => {
-                                      removeActivity(act.id);
+                                      deleteActivity(act.id).catch((error) => {
+                                        showToast('Delete Failed', error instanceof Error ? error.message : 'Unable to delete activity.');
+                                      });
                                       setDeleteConfirmId(null);
                                       showToast('Deleted', 'Entry removed from memory');
                                     }}

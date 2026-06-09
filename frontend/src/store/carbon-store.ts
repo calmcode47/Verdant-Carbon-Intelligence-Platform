@@ -9,6 +9,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Activity, UserProfile, AIInsight, Challenge, CarbonSummary, LeaderboardEntry } from '@/types';
 import { calculateCarbon, getXPForActivity } from '@/lib/carbon-calculator';
+import { CreateActivityPayload, normalizeSnapshot, verdantApi } from '@/lib/api-client';
+import type { AppSnapshot } from '@/server/services/types';
 
 interface CarbonStore {
   user: UserProfile | null;
@@ -28,6 +30,12 @@ interface CarbonStore {
   setSummary: (summary: CarbonSummary) => void;
   setLoading: (loading: boolean) => void;
   updateLeaderboard: () => void;
+  applySnapshot: (snapshot: AppSnapshot) => void;
+  syncFromBackend: () => Promise<void>;
+  createActivity: (activity: CreateActivityPayload) => Promise<void>;
+  deleteActivity: (id: string) => Promise<void>;
+  updateUserProfile: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>>) => Promise<void>;
+  createChallengeFromInsight: (insight: AIInsight) => Promise<void>;
   
   // Computed
   getTodayActivities: () => Activity[];
@@ -125,6 +133,68 @@ export const useCarbonStore = create<CarbonStore>()(
       isLoading: false,
       
       setUser: (user) => set({ user }),
+      applySnapshot: (snapshot) => {
+        const normalized = normalizeSnapshot(snapshot);
+        set({
+          user: normalized.user,
+          activities: normalized.activities,
+          summary: normalized.summary,
+          challenges: normalized.challenges,
+          leaderboard: normalized.leaderboard,
+        });
+      },
+
+      syncFromBackend: async () => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.getSnapshot();
+          get().applySnapshot(snapshot);
+        } catch (error) {
+          console.warn('Backend sync failed; using local demo cache.', error instanceof Error ? error.message : error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      createActivity: async (activity) => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.createActivity(activity);
+          get().applySnapshot(snapshot);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      deleteActivity: async (id) => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.deleteActivity(id);
+          get().applySnapshot(snapshot);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      updateUserProfile: async (patch) => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.updateUser(patch);
+          get().applySnapshot(snapshot);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      createChallengeFromInsight: async (insight) => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.createChallengeFromInsight(insight);
+          get().applySnapshot(snapshot);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
       
       addActivity: (activity) => {
         const calculatedEmissions = calculateCarbon(activity.subCategory, activity.value);

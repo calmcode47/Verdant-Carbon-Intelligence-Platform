@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { deleteActivity } from '@/server/services/carbon-service';
+import { attachSessionCookie, getClientKey, getSession } from '@/server/api/session';
+import { errorResponse } from '@/server/api/http';
+import { assertRateLimit } from '@/server/services/rate-limit-service';
+
+export const runtime = 'nodejs';
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const session = getSession(req);
+  try {
+    await assertRateLimit(getClientKey(req, session.sessionId), 'activity:delete', 60, 60_000);
+    const { id } = await params;
+    const snapshot = await deleteActivity(session.sessionId, id);
+    return attachSessionCookie(NextResponse.json(snapshot), session.sessionId, session.shouldSetCookie);
+  } catch (error) {
+    return errorResponse(req, error);
+  }
+}

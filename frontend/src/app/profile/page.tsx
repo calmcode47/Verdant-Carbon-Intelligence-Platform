@@ -268,6 +268,7 @@ function SettingRow({
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const user = useCarbonStore((state) => state.user);
+  const updateUserProfile = useCarbonStore((state) => state.updateUserProfile);
 
   const name          = user?.name          ?? 'Eco Warrior';
   const avatar        = user?.avatar        ?? '🌱';
@@ -293,10 +294,13 @@ export default function ProfilePage() {
   useEffect(() => { const t = setTimeout(() => setAnimXp(xpPct), 400); return () => clearTimeout(t); }, [xpPct]);
 
   // Goals state
-  const [monthlyGoal, setMonthlyGoal] = useState(390);
+  const [monthlyGoal, setMonthlyGoal] = useState(user?.monthlyBudgetKg ?? 390);
   const [yearGoalKg,  setYearGoalKg]  = useState(3500);
   const [goalBarAnim, setGoalBarAnim] = useState(false);
   useEffect(() => { const t = setTimeout(() => setGoalBarAnim(true), 600); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (user?.monthlyBudgetKg) setMonthlyGoal(user.monthlyBudgetKg);
+  }, [user?.monthlyBudgetKg]);
 
   const avgMonthly  = 13 * 30;   // ~390 kg
   const goalPct     = Math.min(100, (monthlyGoal / avgMonthly) * 100);
@@ -600,7 +604,14 @@ export default function ProfilePage() {
                   label="MONTHLY CARBON BUDGET"
                   value={monthlyGoal}
                   unit="kg CO₂e / month"
-                  onChange={v => { setMonthlyGoal(v); setGoalBarAnim(false); setTimeout(() => setGoalBarAnim(true), 50); }}
+                  onChange={v => {
+                    setMonthlyGoal(v);
+                    updateUserProfile({ monthlyBudgetKg: v }).catch((error) => {
+                      console.error('Profile update failed:', error instanceof Error ? error.message : error);
+                    });
+                    setGoalBarAnim(false);
+                    setTimeout(() => setGoalBarAnim(true), 50);
+                  }}
                 />
 
                 {/* Goal bar */}

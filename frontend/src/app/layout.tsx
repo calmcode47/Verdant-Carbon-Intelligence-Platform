@@ -7,6 +7,7 @@
 
 import type { Metadata } from 'next';
 import { Navigation } from '@/components/layout/Navigation';
+import { BackendHydrator } from '@/components/data/BackendHydrator';
 
 import { TooltipProvider } from '@/components/ui/Tooltip';
 import '@/styles/globals.css';
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ background: '#030810' }}>
 
         <TooltipProvider delayDuration={200}>
+          <BackendHydrator />
           <Navigation />
           <main>{children}</main>
         </TooltipProvider>

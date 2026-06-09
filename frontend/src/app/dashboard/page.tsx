@@ -116,8 +116,8 @@ export default function DashboardPage() {
   const activities = useCarbonStore((state) => state.activities);
   const insights = useCarbonStore((state) => state.insights);
   const summary = useCarbonStore((state) => state.summary);
-  const addActivity = useCarbonStore((state) => state.addActivity);
-  const removeActivity = useCarbonStore((state) => state.removeActivity);
+  const createActivity = useCarbonStore((state) => state.createActivity);
+  const deleteActivity = useCarbonStore((state) => state.deleteActivity);
   const setInsights = useCarbonStore((state) => state.setInsights);
 
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function DashboardPage() {
   };
 
   // Seeding realistic mock data
-  const seedMockData = () => {
+  const seedMockData = async () => {
     const now = new Date();
     // We add activities across the last 7 days
     const mockActs = [];
@@ -217,7 +217,15 @@ export default function DashboardPage() {
       });
     }
 
-    mockActs.forEach((act) => addActivity(act));
+    for (const act of mockActs) {
+      await createActivity({
+        category: act.category,
+        subCategory: act.subCategory,
+        value: act.value,
+        notes: act.notes,
+        timestamp: act.timestamp,
+      });
+    }
     // Re-fetch insights based on seeded data
     setTimeout(() => {
       fetchAIInsights();
@@ -944,7 +952,11 @@ export default function DashboardPage() {
                                 
                                 {/* Delete Button on Hover */}
                                 <button
-                                  onClick={() => removeActivity(act.id)}
+                                  onClick={() => {
+                                    deleteActivity(act.id).catch((error) => {
+                                      console.error('Delete activity failed:', error instanceof Error ? error.message : error);
+                                    });
+                                  }}
                                   className="opacity-0 group-hover:opacity-100 p-2 bg-rose-500/10 border border-rose-500/20 text-[#FF5252] rounded-xl hover:bg-rose-500 hover:text-white transition-all focus:outline-none"
                                   aria-label="Delete entry"
                                 >

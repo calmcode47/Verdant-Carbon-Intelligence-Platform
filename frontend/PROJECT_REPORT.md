@@ -3,6 +3,8 @@
 
 > **"Know Your Carbon. Own Your Future."**
 
+> **Implementation update:** This report captures the original frontend-heavy project state. The current submission now includes a Next.js 16 backend with signed anonymous sessions, Neon-compatible Postgres persistence through Drizzle ORM, server-side activity calculation, profile/challenge APIs, DB-backed rate limiting, Zod validation, and Gemini 3.5 Flash insights. Use `README.md` as the current architecture and deployment source of truth.
+
 ---
 
 ## Table of Contents

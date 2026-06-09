@@ -15,10 +15,10 @@
 
 <br/>
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-r184-black?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
-[![Gemini](https://img.shields.io/badge/Google_Gemini-1.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-3.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
@@ -91,7 +91,7 @@ Log an activity  →  AI analyses your pattern  →  Get personalised tips
 ## ✨ What Makes Verdant Unique
 
 ### 1. 🧠 Gemini-Powered Intelligence — Not Just a Calculator
-Every user gets a **personal AI carbon advisor** (powered by Google Gemini 1.5 Flash) that analyses their activity patterns and generates 4 insight types: **Tips**, **Warnings**, **Achievements**, and **Month-end Predictions** — each backed by IPCC/EPA emission data. A built-in rate-limiter (12 req/min per IP) and prompt sanitizer protect the endpoint.
+Every user gets a **personal AI carbon advisor** (powered by Google Gemini 3.5 Flash with deterministic fallback rules) that analyses their activity patterns and generates 4 insight types: **Tips**, **Warnings**, **Achievements**, and **Month-end Predictions** — each backed by IPCC/EPA emission data. DB-backed rate limiting, signed anonymous sessions, Zod validation, and server-side carbon calculations protect the API.
 
 ### 2. 🎮 Eco Warrior Gamification — Arena-Level Engagement
 The Challenges page is designed like a competitive gaming arena with **live countdown timers**, **animated XP bars**, **hexagonal SVG badge rarity system** (Common → Legendary), a **10-warrior global leaderboard** with animated staggered entrance, and spring-physics card animations.
@@ -115,7 +115,7 @@ Verdant has **two distinct design personalities**: a cool dark-sci-fi palette (`
 Every interactive element has unique `id` attributes for browser testing, ARIA `role` and `aria-checked` on toggles, keyboard navigation support, and high-contrast colour ratios throughout. All Three.js canvases are wrapped with `role="img"` and descriptive `aria-label` attributes.
 
 ### 9. 🔒 Security-Hardened API
-The `/api/insights` route includes in-memory **IP-based rate limiting** (12 req/min), **prompt sanitization** (strips HTML/SQL injection attempts), **input length caps**, and strict **Content-Security-Policy** headers set globally via `next.config.js`.
+The API layer uses httpOnly signed anonymous sessions, DB-backed rate limiting, strict Zod request validation, body size caps, server-side emission factor lookup, safe error responses, and strict **Content-Security-Policy** headers set globally via `next.config.js`.
 
 ---
 
@@ -143,7 +143,7 @@ The logging engine. A **Carbon Molecule** Three.js animation hovers above a cate
 ---
 
 ### 🔍 Insights — `/insights` · *The AI Oracle*
-The intelligence layer. Powered by **Google Gemini 1.5 Flash**, this page analyses your last 20 activities and returns structured, actionable insights. An interactive AI chat bubble lets you ask specific questions. A **NeuralCore** Three.js widget and deep violet aurora bokeh background set the AI mood.
+The intelligence layer. Powered by **Google Gemini 3.5 Flash**, this page analyses your last 20 activities and returns structured, actionable insights. An interactive AI chat bubble lets you ask specific questions. A **NeuralCore** Three.js widget and deep violet aurora bokeh background set the AI mood.
 
 **Key features:** Gemini API integration with rich fallback, 4 insight types (Tip / Warning / Achievement / Prediction), difficulty and potential-saving labels, 4 Recharts visualisations, AI chat interface with contextual keyword matching.
 
@@ -168,7 +168,7 @@ The reflective space. A warm **amber aurora bokeh** background contrasts with th
 ### Frontend
 | Technology | Version | Role |
 |-----------|---------|------|
-| **Next.js** | 14.2 | App Router, SSR, API Routes |
+| **Next.js** | 16.2 | App Router, SSR, Route Handlers |
 | **React** | 18 | UI component model |
 | **TypeScript** | 5.0 | Type safety throughout |
 | **Tailwind CSS** | 3.4 | Utility-first styling |
@@ -184,8 +184,8 @@ The reflective space. A warm **amber aurora bokeh** background contrasts with th
 ### AI & Intelligence
 | Technology | Role |
 |-----------|------|
-| **Google Gemini 1.5 Flash** | Carbon insight generation, chat, predictions |
-| **@google/generative-ai** | Official SDK for Gemini API access |
+| **Google Gemini 3.5 Flash** | Carbon insight generation, chat, predictions |
+| **@google/genai** | Official SDK for Gemini API access |
 
 ### Styling Architecture
 | Approach | Used For |
@@ -198,7 +198,7 @@ The reflective space. A warm **amber aurora bokeh** background contrasts with th
 
 ### State Management
 ```
-Zustand Store (persisted to localStorage)
+Zustand Store (hydrated from backend; cached in localStorage)
 ├── user: UserProfile          — name, level, XP, streak, badges
 ├── activities: Activity[]     — all logged activities
 ├── challenges: Challenge[]    — active/completed challenges
@@ -210,9 +210,37 @@ Zustand Store (persisted to localStorage)
 ### Backend & Deployment
 | Technology | Role |
 |-----------|------|
-| **Next.js API Routes** | `/api/insights` — Gemini AI integration |
-| **Vercel** | Production hosting + Edge Functions |
-| **localStorage** | Client-side persistence (via Zustand `persist` middleware) |
+| **Next.js Route Handlers** | Secure JSON APIs for profile, activities, summary, challenges, and AI insights |
+| **Neon Serverless Postgres** | Durable anonymous-session data persistence |
+| **Drizzle ORM** | Typed schema and Postgres access |
+| **Zod** | Runtime API validation |
+| **Vercel** | Production hosting |
+| **localStorage** | Short-lived offline/demo cache via Zustand persist middleware |
+
+### Required Environment Variables
+
+```bash
+DATABASE_URL=postgres://...
+GEMINI_API_KEY=...
+SESSION_SECRET=use-a-random-32-character-secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=Verdant
+```
+
+Without `DATABASE_URL`, Verdant runs with an in-memory local demo backend. Without `GEMINI_API_KEY`, the AI endpoint returns deterministic structured fallback insights.
+
+### Backend API Surface
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/me` | Hydrate profile, activities, summary, challenges, and leaderboard |
+| `PATCH /api/me` | Update anonymous user profile and carbon budget |
+| `POST /api/activities` | Log an activity; emissions, XP, badges, and challenge progress are calculated server-side |
+| `DELETE /api/activities/:id` | Delete a user-owned activity and recalculate totals |
+| `GET /api/summary` | Return current carbon summary |
+| `GET /api/challenges` | Return active and completed user challenges |
+| `POST /api/challenges/from-insight` | Convert an AI insight into a weekly challenge |
+| `POST /api/insights` | Generate structured AI insights and chat responses |
 
 ---
 
@@ -246,7 +274,7 @@ Zustand Store (persisted to localStorage)
   │   │                                                               │   │
   │   │   1. Parse activities + user question from request body      │   │
   │   │   2. Build contextual prompt with IPCC-grounded system ctx   │   │
-  │   │   3. Call Gemini 1.5 Flash via @google/generative-ai SDK     │   │
+  │   │   3. Call Gemini 3.5 Flash via @google/genai SDK             │   │
   │   │   4. Parse + validate JSON response                          │   │
   │   │   5. Return structured insights (or rich fallbacks)          │   │
   │   └────────────────────────────────┬────────────────────────────┘   │
@@ -257,7 +285,7 @@ Zustand Store (persisted to localStorage)
   ┌──────────────────────────────────  │  ────────────────────────────── ┐
   │                                    ▼                                  │
   │   ┌─────────────────────────────────────────────────────────────┐   │
-  │   │                 Google Gemini 1.5 Flash API                  │   │
+  │   │                 Google Gemini 3.5 Flash API                  │   │
   │   │         (AI carbon analysis · chat · predictions)            │   │
   │   └─────────────────────────────────────────────────────────────┘   │
   │                                                                       │
@@ -265,7 +293,7 @@ Zustand Store (persisted to localStorage)
 
   Data Persistence
   ┌───────────────────────────────────────────────────────────────────── ┐
-  │   localStorage  ←  Zustand `persist` middleware  ←  User actions     │
+  │   Neon Postgres  ←  Route Handlers  ←  Zustand backend actions       │
   └───────────────────────────────────────────────────────────────────── ┘
 ```
 
@@ -345,7 +373,7 @@ User visits /insights OR sends a chat message
 POST /api/insights
   body: { activities[], userQuestion, summary }
        ↓
-Gemini 1.5 Flash receives:
+Gemini 3.5 Flash receives:
   - System context: "You are an expert carbon analyst..."
   - User activities: JSON array of recent logs
   - User's carbon summary: totals by category
@@ -509,7 +537,7 @@ NEXT_PUBLIC_APP_NAME=Verdant
 
 ### `POST /api/insights`
 
-Generates AI-powered carbon insights and chat responses using Google Gemini 1.5 Flash.
+Generates AI-powered carbon insights and chat responses using Google Gemini 3.5 Flash.
 
 #### Request Body
 ```json
@@ -736,9 +764,9 @@ CMD ["npm", "start"]
 
 3. **All users have identical emission budgets by default.** The 400 kg/month budget is the IPCC Paris-compatible per-capita target for a 1.5°C pathway (approximately 5 tonnes/year). A future onboarding flow could personalise this based on location and household size.
 
-4. **The leaderboard is local/mock in the current version.** All leaderboard data is generated client-side. A real multi-user leaderboard would require a database layer (e.g., Supabase/PostgreSQL).
+4. **The leaderboard is benchmarked for the demo.** The current user row is backed by the server snapshot, while peer rows are curated benchmark competitors for a stable hackathon demo.
 
-5. **XP and gamification data persist per-device.** The Zustand store uses `localStorage` for persistence. Switching devices resets progress. A cloud sync layer would be needed for production.
+5. **XP and gamification data persist through anonymous sessions.** The backend stores activities, profile metrics, badges, and challenges in Neon Postgres when `DATABASE_URL` is configured; localStorage is only a short-lived cache.
 
 6. **Flight emissions use a fixed radiative forcing multiplier of ×1.0 (not ×2).** Some methodologies apply a ×2 multiplier to account for high-altitude warming effects. We chose the conservative IPCC base estimate to avoid alarming users with factors that are still scientifically debated.
 
@@ -863,7 +891,7 @@ Verdant would not exist without the foundational work of the organisations and r
 - 🇬🇧 **UK Department for Transport (DfT)** — vehicle fleet emission factors
 
 ### Technology & Platforms
-- 🤖 **Google Gemini** — for providing access to Gemini 1.5 Flash through the Google AI Developer Program
+- 🤖 **Google Gemini** — for providing access to Gemini 3.5 Flash through the Google AI Developer Program
 - 🎨 **Three.js community** — for the incredible 3D library that makes the immersive scenes possible
 - 📊 **Recharts team** — for the composable React charting library
 - 🏗️ **Vercel** — for frictionless Next.js deployment infrastructure

@@ -49,12 +49,7 @@ const CarbonMolecule = dynamic(
   () => import('@/components/three/CarbonMolecule'),
   {
     ssr: false,
-    loading: () => (
-      <div
-        style={{ width: '100%', height: '100%' }}
-        aria-hidden="true"
-      />
-    ),
+    loading: () => null,
   }
 );
 
@@ -204,16 +199,9 @@ const slideInCard = {
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   if (!mounted) {
@@ -237,32 +225,20 @@ export default function LandingPage() {
         {/* ================= SECTION 1: HERO ================= */}
         <section className="relative w-full h-[calc(100vh-64px)] flex flex-col items-center justify-center overflow-hidden border-b border-slate-900">
           
-          {/* Earth Background: WebGL Canvas on Desktop, CSS Gradient Sphere on Mobile */}
-          {isMobile ? (
-            <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
-              <div 
-                className="w-[75vw] h-[75vw] max-w-[350px] max-h-[350px] rounded-full blur-2xl opacity-40 animate-pulse"
-                style={{
-                  background: 'radial-gradient(circle, #00E676 0%, #1565C0 55%, #050810 100%)',
-                  animationDuration: '7s'
-                }}
-              />
-            </div>
-          ) : (
-            <div className="absolute inset-0 z-0">
-              <Suspense fallback={null}>
-                <div
-                  role="img"
-                  aria-label="Interactive Earth globe visualization"
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <WebGLErrorBoundary>
-                    <EarthGlobe />
-                  </WebGLErrorBoundary>
-                </div>
-              </Suspense>
-            </div>
-          )}
+          {/* Earth Background: WebGL when available, polished fallback otherwise */}
+          <div className="absolute inset-0 z-0">
+            <Suspense fallback={null}>
+              <div
+                role="img"
+                aria-label="Interactive Earth globe visualization"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <WebGLErrorBoundary>
+                  <EarthGlobe />
+                </WebGLErrorBoundary>
+              </div>
+            </Suspense>
+          </div>
 
           {/* Vignette Overlay for dark atmosphere */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#050810] via-transparent to-[#050810]/40 pointer-events-none z-10" />

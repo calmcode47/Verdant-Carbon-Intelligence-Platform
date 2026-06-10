@@ -149,18 +149,24 @@ export default function TrackPage() {
   const [calcValue, setCalcValue] = useState<string>('15');
   const [notes, setNotes] = useState<string>('');
 
-  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleValueChange = (value: string) => {
     setInputValue(value); // update display immediately
-    clearTimeout(calcTimeoutRef.current);
+    if (calcTimeoutRef.current) {
+      clearTimeout(calcTimeoutRef.current);
+    }
     calcTimeoutRef.current = setTimeout(() => {
       setCalcValue(value);
     }, 200);
   };
 
   useEffect(() => {
-    return () => clearTimeout(calcTimeoutRef.current);
+    return () => {
+      if (calcTimeoutRef.current) {
+        clearTimeout(calcTimeoutRef.current);
+      }
+    };
   }, []);
   
   // Custom states

@@ -3,7 +3,8 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
+import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 interface OrbData {
   position: [number, number, number];
@@ -62,14 +63,38 @@ function OrbScene() {
   );
 }
 
-import { WebGLErrorBoundary } from './WebGLErrorBoundary';
+function DataOrbsFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'radial-gradient(circle at 50% 45%, rgba(0,230,118,0.18), rgba(8,12,10,0.04) 52%, transparent 72%)',
+      }}
+    >
+      <div
+        style={{
+          width: 150,
+          height: 150,
+          borderRadius: 999,
+          border: '1px solid rgba(0,230,118,0.28)',
+          background: 'radial-gradient(circle at 35% 30%, rgba(0,230,118,0.5), rgba(255,179,0,0.16) 48%, rgba(255,82,82,0.08) 70%)',
+          boxShadow: '0 0 48px rgba(0,230,118,0.18), inset 0 0 36px rgba(0,0,0,0.45)',
+        }}
+      />
+    </div>
+  );
+}
 
 export function DataOrbs() {
   const tier = getPerformanceTier();
-  if (tier === 'LOW') return null;
+  if (!hasWebGLSupport()) return <DataOrbsFallback />;
 
   return (
-    <WebGLErrorBoundary>
+    <WebGLErrorBoundary fallback={<DataOrbsFallback />}>
       <Canvas
         dpr={safePixelRatio()}
         camera={{ position: [0, 0, 4], fov: 50 }}

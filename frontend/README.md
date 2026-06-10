@@ -36,7 +36,7 @@
 
 <div align="center">
 
-> **🔴 LIVE DEMO**: [verdant.vercel.app](https://verdant.vercel.app) &nbsp;·&nbsp; **📹 VIDEO**: [Watch 2-minute walkthrough](#)
+> **🔴 LIVE DEMO**: [frontend-five-ruby-77.vercel.app](https://frontend-five-ruby-77.vercel.app) &nbsp;·&nbsp; **📹 VIDEO**: [Watch 2-minute walkthrough](#)
 
 <br/>
 
@@ -97,7 +97,7 @@ Every user gets a **personal AI carbon advisor** (powered by Google Gemini 3.5 F
 The Challenges page is designed like a competitive gaming arena with **live countdown timers**, **animated XP bars**, **hexagonal SVG badge rarity system** (Common → Legendary), a **10-warrior global leaderboard** with animated staggered entrance, and spring-physics card animations.
 
 ### 3. 🌐 Three.js Immersive 3D — Science Meets Art
-Every major page uses a dedicated Three.js scene. The centrepiece is a **physically-rendered Earth Globe** on the home page with a **2048×1024 fBm fractal terrain** (multi-octave noise, elevation-graded biomes, polar ice caps), **per-pixel roughness map** (shiny oceans, matte land), **procedural cloud layer**, **3 000-star field**, and **orbital rings** — making the globe look like a real satellite render. Secondary pages use CSS-based aurora bokeh gradients for zero GPU overhead.
+Every major page uses a dedicated Three.js scene. The centrepiece is a **physically-rendered Earth Globe** on the home page with a **2048×1024 fBm fractal terrain** (multi-octave noise, elevation-graded biomes, polar ice caps), **per-pixel roughness map** (shiny oceans, matte land), **procedural cloud layer**, **3 000-star field**, and **orbital rings** — making the globe look like a real satellite render. Dashboard and Insights use lightweight animated 3D widgets, and every WebGL feature has a polished branded fallback instead of disappearing on unsupported devices.
 
 ### 4. 📐 Science-Grade Emission Factors
 All calculations use real peer-reviewed emission factors from **IPCC AR6**, **EPA eGRID**, and **IEA** — covering 24 sub-categories across Transport, Food, Energy, and Lifestyle. Not guesses. Not averages. Calibrated science.
@@ -225,7 +225,7 @@ Backend implementation files live in `frontend/backend`, while `frontend/src/app
 DATABASE_URL=postgres://...
 GEMINI_API_KEY=...
 SESSION_SECRET=use-a-random-32-character-secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://frontend-five-ruby-77.vercel.app
 NEXT_PUBLIC_APP_NAME=Verdant
 ```
 
@@ -445,92 +445,61 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ```
 verdant-carbon-intelligence-platform/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx              # 🏠 Home — Carbon Observatory
-│   │   ├── dashboard/page.tsx    # 📊 Mission Control
-│   │   ├── track/page.tsx        # 📝 Carbon Forge
-│   │   ├── insights/page.tsx     # 🔍 AI Oracle
-│   │   ├── challenges/page.tsx   # ⚔️  Eco Warrior Arena
-│   │   ├── profile/page.tsx      # 👤 Personal Sanctuary
-│   │   ├── layout.tsx            # Root layout + Navigation
-│   │   └── api/
-│   │       └── insights/route.ts # Gemini AI endpoint (rate-limited)
-│   ├── components/
-│   │   ├── backgrounds/
-│   │   │   ├── LandingBackground.tsx    # Home aurora bokeh CSS
-│   │   │   ├── InsightsBackground.tsx   # Insights deep-violet bokeh
-│   │   │   ├── ChallengesBackground.tsx # Emerald bokeh CSS
-│   │   │   └── ProfileBackground.tsx    # Amber bokeh CSS
-│   │   ├── layout/
-│   │   │   ├── Navigation.tsx    # Glassmorphic nav + carbon ring
-│   │   │   └── PageTransition.tsx
-│   │   ├── three/
-│   │   │   ├── EarthGlobe.tsx           # Home globe (fBm + clouds + PBR)
-│   │   │   ├── CarbonMolecule.tsx       # Track page 3D molecule
-│   │   │   ├── DataOrbs.tsx             # Dashboard ambient orbs
-│   │   │   ├── NeuralCore.tsx           # Insights AI core widget
-│   │   │   ├── ConstellationBackground.tsx
-│   │   │   ├── LeafParticles.tsx
-│   │   │   └── WebGLErrorBoundary.tsx   # Error boundary for all canvases
-│   │   ├── visualizations/
-│   │   │   ├── EarthCanvas.tsx
-│   │   │   └── EmissionGlobe.tsx
-│   │   ├── challenges/
-│   │   │   └── ChallengeList.tsx
-│   │   └── ui/
-│   │       ├── Button.tsx
-│   │       ├── Card.tsx
-│   │       ├── Dialog.tsx
-│   │       ├── Progress.tsx
-│   │       └── Tooltip.tsx
-│   ├── hooks/
-│   │   └── useVisibilityPause.ts # Pause RAF when tab is hidden
-│   ├── store/
-│   │   └── carbon-store.ts       # Zustand store (persisted)
-│   ├── lib/
-│   │   ├── carbon-calculator.ts  # Emission factor engine
-│   │   ├── errors.ts             # safeAsync error utility
-│   │   ├── performance.ts        # getPerformanceTier / safePixelRatio
-│   │   ├── gemini.ts             # Gemini SDK setup
-│   │   └── utils.ts
-│   ├── types/
-│   │   └── index.ts              # TypeScript interfaces
-│   └── styles/
-│       └── globals.css           # CSS custom properties + animations
-├── next.config.js                # Security headers + image config
-├── .eslintrc.json                # ESLint rules (no-any, no-unused-vars)
-├── tailwind.config.ts
-├── tsconfig.json
-└── package.json
+├── README.md
+└── frontend/
+    ├── backend/
+    │   ├── api/                     # Validation, sessions, HTTP helpers
+    │   ├── db/                      # Drizzle schema, Neon client, bootstrap
+    │   └── services/                # Carbon, challenges, insights, rate limits
+    ├── src/
+    │   ├── app/
+    │   │   ├── page.tsx             # 🏠 Home — Carbon Observatory
+    │   │   ├── dashboard/page.tsx   # 📊 Mission Control
+    │   │   ├── track/page.tsx       # 📝 Carbon Forge
+    │   │   ├── insights/page.tsx    # 🔍 AI Oracle
+    │   │   ├── challenges/page.tsx  # ⚔️ Eco Warrior Arena
+    │   │   ├── profile/page.tsx     # 👤 Personal Sanctuary
+    │   │   ├── layout.tsx           # Root layout + Navigation
+    │   │   └── api/                 # Thin Next.js route handlers
+    │   ├── components/
+    │   │   ├── backgrounds/
+    │   │   ├── layout/
+    │   │   ├── three/               # EarthGlobe, DataOrbs, NeuralCore, fallbacks
+    │   │   ├── visualizations/
+    │   │   ├── challenges/
+    │   │   └── ui/
+    │   ├── hooks/
+    │   ├── store/
+    │   ├── lib/
+    │   ├── types/
+    │   └── styles/
+    ├── next.config.js              # Security headers + image config
+    ├── eslint.config.mjs           # Flat ESLint config
+    ├── tailwind.config.ts
+    ├── tsconfig.json
+    └── package.json
 ```
 
 ---
 
 ## 🔐 Environment Variables
 
-Create a `.env.local` file in the project root:
+Create `frontend/.env.local` locally and configure the same keys in Vercel Production:
 
 ```bash
-# ─────────────────────────────────────────────────────────────────
-# Google Gemini API
-# ─────────────────────────────────────────────────────────────────
-# Required for AI-powered insights on /insights page
-# Get a free key at: https://ai.google.dev/
-# Without this key, the app uses rich pre-built fallback insights.
+DATABASE_URL=postgres://...
 GEMINI_API_KEY=your_gemini_api_key_here
-
-# ─────────────────────────────────────────────────────────────────
-# App Configuration (optional)
-# ─────────────────────────────────────────────────────────────────
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+SESSION_SECRET=use-a-random-32-character-secret
+NEXT_PUBLIC_APP_URL=https://frontend-five-ruby-77.vercel.app
 NEXT_PUBLIC_APP_NAME=Verdant
 ```
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Optional | Google Gemini API key for AI insights. Falls back gracefully if absent. |
-| `NEXT_PUBLIC_APP_URL` | Optional | Base URL for Share API and meta tags |
+| `DATABASE_URL` | Recommended | Neon Postgres connection string for durable anonymous-session persistence. Uses in-memory demo storage if absent. |
+| `GEMINI_API_KEY` | Optional | Google Gemini API key for AI insights. Falls back gracefully if absent or invalid. |
+| `SESSION_SECRET` | Required in production | Secret used to sign httpOnly anonymous session cookies. |
+| `NEXT_PUBLIC_APP_URL` | Optional | Production URL for Share API and metadata. |
 | `NEXT_PUBLIC_APP_NAME` | Optional | Brand name override |
 
 ---
@@ -673,12 +642,12 @@ rm -rf .next && npm run build
 
 ### 🔒 Security & Code Quality
 - **CSP headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, full `Content-Security-Policy` via `next.config.js`
-- **Rate limiting** — in-memory IP-based limiter (12 req/60s) on `/api/insights`
+- **Rate limiting** — DB-backed IP/session limiter when Postgres is configured, with safe local fallback
 - **Prompt sanitization** — strips HTML tags and SQL-like patterns from user input
 - **ESLint** — `@typescript-eslint/no-explicit-any: error`, `no-unused-vars: error`
 - **`safeAsync`** — typed error-handling wrapper replaces all unguarded `fetch` calls
 - **`useVisibilityPause`** — pauses Three.js RAF loops when the browser tab is hidden
-- **`getPerformanceTier`** — downgrades geometry complexity on low-end devices
+- **`getPerformanceTier`** — reduces DPR and geometry complexity on low-end devices without hiding 3D on WebGL-capable clients
 
 ### 🖱️ UX Polish
 - Removed green custom cursor (native OS cursor restored)
@@ -693,13 +662,16 @@ rm -rf .next && npm run build
 ### Deploy to Vercel (Recommended)
 
 ```bash
-# Option A: One-click via Vercel CLI
+# From the Next.js app directory
+cd frontend
 npx vercel --prod
 
-# Option B: Import project at vercel.com/new
-# 1. Connect your GitHub repository
-# 2. Set environment variables (GEMINI_API_KEY)
-# 3. Click Deploy — Vercel auto-detects Next.js
+# Required Production env vars in Vercel:
+# DATABASE_URL
+# GEMINI_API_KEY
+# SESSION_SECRET
+# NEXT_PUBLIC_APP_URL
+# NEXT_PUBLIC_APP_NAME=Verdant
 ```
 
 **Vercel configuration** (`vercel.json`, optional):
@@ -715,6 +687,25 @@ npx vercel --prod
 ```
 
 > 💡 `bom1` = Mumbai region — optimal for South Asia deployments.
+
+### Validation Commands
+
+```bash
+cd frontend
+npm run lint
+npm run test
+npm run build
+npm audit --audit-level=moderate
+```
+
+Submission checks:
+
+```bash
+git branch --list
+git ls-files | xargs -I{} du -k {} 2>/dev/null | awk '{sum+=$1} END {print sum " KB tracked"}'
+```
+
+Run a secret scan before submission for provider tokens, database URLs, API keys, and project-specific key fragments. Do not place real secrets or copied secret fragments in documentation.
 
 ### Deploy to Cloud Run (Alternative)
 

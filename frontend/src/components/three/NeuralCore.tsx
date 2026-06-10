@@ -3,7 +3,7 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 function CoreMesh() {
@@ -76,18 +76,26 @@ function CoreMesh() {
 
 export function NeuralCore() {
   const tier = getPerformanceTier();
-  if (tier === 'LOW') {
-    return (
-      <div style={{
-        width: 120, height: 120, borderRadius: '50%',
-        background: 'radial-gradient(circle at 40% 40%, rgba(124,58,237,0.6), rgba(79,70,229,0.2))',
-        boxShadow: '0 0 40px rgba(124,58,237,0.3)',
-      }} aria-hidden="true" />
-    );
-  }
+  const fallback = (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        minWidth: 120,
+        minHeight: 120,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle at 40% 40%, rgba(124,58,237,0.62), rgba(0,229,255,0.18) 46%, rgba(79,70,229,0.08) 72%)',
+        boxShadow: '0 0 40px rgba(124,58,237,0.3), inset 0 0 28px rgba(0,0,0,0.38)',
+        border: '1px solid rgba(0,229,255,0.2)',
+      }}
+      aria-hidden="true"
+    />
+  );
+
+  if (!hasWebGLSupport()) return fallback;
 
   return (
-    <WebGLErrorBoundary>
+    <WebGLErrorBoundary fallback={fallback}>
       <Canvas
         dpr={safePixelRatio()}
         camera={{ position: [0, 0, 3], fov: 50 }}

@@ -4,7 +4,7 @@ import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 // ─── Seeded pseudo-random ────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ function createRng(seed: number) {
   return () => {
     s = Math.imul(s ^ (s >>> 17), 0x9e3779b9) >>> 0;
     s = Math.imul(s ^ (s >>> 13), 0x6c62272e) >>> 0;
-    return (s ^ (s >>> 16)) / 4294967296;
+    return ((s ^ (s >>> 16)) >>> 0) / 4294967296;
   };
 }
 
@@ -401,18 +401,18 @@ export function EarthGlobeFallback() {
 // ─── Root export ─────────────────────────────────────────────────────────────
 export default function EarthGlobe() {
   const tier = getPerformanceTier();
-  if (tier === 'LOW') return <EarthGlobeFallback />;
+  if (!hasWebGLSupport()) return <EarthGlobeFallback />;
 
   return (
-    <WebGLErrorBoundary>
+    <WebGLErrorBoundary fallback={<EarthGlobeFallback />}>
       <Canvas
         dpr={safePixelRatio()}
         camera={{ position: [0, 0, 3.5], fov: 42 }}
         frameloop="always"
         gl={{
-          antialias: true,
+          antialias: tier === 'HIGH',
           alpha: true,
-          powerPreference: 'high-performance',
+          powerPreference: tier === 'HIGH' ? 'high-performance' : 'default',
           stencil: false,
           depth: true,
         }}

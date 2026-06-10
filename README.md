@@ -90,14 +90,13 @@ git ls-files | xargs -I{} du -k {} 2>/dev/null | awk '{sum+=$1} END {print sum "
 
 Run a secret scan before submission for provider tokens, database URLs, API keys, and project-specific key fragments. Do not place real secrets or copied secret fragments in documentation.
 
-Current validation status: lint, tests, and production build pass; tracked repository size is approximately 1.3 MB; only the `main` branch is used.
+Current validation status: lint, 14 Vitest checks, and production build pass; tracked repository size is approximately 1.3 MB; only the `main` branch is used. `npm audit --audit-level=moderate` currently reports the known Next.js nested PostCSS advisory whose automated fix downgrades Next.js to 9.x; the project keeps the modern Next.js 16 stack rather than applying that breaking downgrade.
 
 ## Deployment
 
-Deploy from `frontend` with the linked Vercel project:
+Deploy from the repository root so Vercel packages both the Next.js frontend and the root `backend` service layer:
 
 ```bash
-cd frontend
 npx vercel deploy --prod
 ```
 
@@ -111,3 +110,4 @@ Vercel must have these Production environment variables configured: `DATABASE_UR
 - DB-backed rate limiting when Postgres is configured.
 - Safe error responses and CSP/security headers in `next.config.js`.
 - No secrets are required in the client bundle.
+- Public API behavior is covered by tests for validation bounds, request limits, signed anonymous sessions, rate limiting, server-side carbon calculations, profile updates, deletion flow, and challenge creation.

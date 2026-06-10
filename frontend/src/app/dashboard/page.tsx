@@ -64,6 +64,49 @@ const Sector = dynamic(() => import('recharts').then((mod) => mod.Sector), { ssr
 
 import { motion, AnimatePresence } from 'framer-motion';
 
+type CategoryBreakdown = {
+  transport: number;
+  food: number;
+  energy: number;
+  lifestyle: number;
+};
+
+type PieDatum = {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number;
+};
+
+type TrendDatum = {
+  name: string;
+  carbon: number;
+  dateStr: string;
+  breakdown: CategoryBreakdown;
+};
+
+type TooltipPayload<TPayload> = {
+  name?: string;
+  value?: number;
+  payload: TPayload;
+};
+
+type TooltipProps<TPayload> = {
+  active?: boolean;
+  payload?: TooltipPayload<TPayload>[];
+  label?: string;
+};
+
+type ActivePieShapeProps = {
+  cx?: number;
+  cy?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  startAngle?: number;
+  endAngle?: number;
+  fill?: string;
+};
+
 // --- INLINE SPARKLINE UTILITY ---
 function Sparkline({ data, color = '#00E676' }: { data: number[]; color?: string }) {
   if (data.length === 0) return null;
@@ -352,9 +395,7 @@ export default function DashboardPage() {
     ].filter((item) => item.value > 0);
   }, [summary]);
 
-  // Donut Tooltip
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const PieTooltip = ({ active, payload }: any) => {
+  const PieTooltip = ({ active, payload }: TooltipProps<PieDatum>) => {
     if (active && payload && payload.length) {
       const data = payload[0];
       return (
@@ -371,9 +412,7 @@ export default function DashboardPage() {
     return null;
   };
 
-  // Weekly Area Tooltip
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const AreaTooltip = ({ active, payload, label }: any) => {
+  const AreaTooltip = ({ active, payload, label }: TooltipProps<TrendDatum>) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -394,10 +433,16 @@ export default function DashboardPage() {
     return null;
   };
 
-  // Donut expansion slice renderer
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderActiveShape = (props: any) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  const renderActiveShape = (props: ActivePieShapeProps) => {
+    const {
+      cx = 0,
+      cy = 0,
+      innerRadius = 0,
+      outerRadius = 0,
+      startAngle = 0,
+      endAngle = 0,
+      fill = '#00E676',
+    } = props;
     return (
       <g>
         <Sector

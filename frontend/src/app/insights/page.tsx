@@ -541,7 +541,16 @@ export default function InsightsPage() {
                         : 'bg-[#06041A]/75 text-slate-200 border border-[#7C3AED]/15'
                     }`}>
                       {msg.sender === 'ai' && msg.isNew ? (
-                        <Typewriter text={msg.text} onComplete={() => delete msg.isNew} />
+                        <Typewriter
+                          text={msg.text}
+                          onComplete={() => {
+                            setChatMessages((messages) =>
+                              messages.map((message) =>
+                                message.id === msg.id ? { ...message, isNew: false } : message
+                              )
+                            );
+                          }}
+                        />
                       ) : (
                         <span className="whitespace-pre-line">{msg.text}</span>
                       )}

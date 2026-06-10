@@ -662,8 +662,7 @@ rm -rf .next && npm run build
 ### Deploy to Vercel (Recommended)
 
 ```bash
-# From the Next.js app directory
-cd frontend
+# From the repository root so Vercel includes root /backend
 npx vercel --prod
 
 # Required Production env vars in Vercel:
@@ -697,6 +696,8 @@ npm run test
 npm run build
 npm audit --audit-level=moderate
 ```
+
+Current validation status: ESLint passes, 14 Vitest checks pass, and the production build passes. The audit command reports the known Next.js nested PostCSS advisory; the automated remediation downgrades Next.js to 9.x, so Verdant keeps the current Next.js 16 stack and documents the upstream advisory instead of applying a breaking downgrade.
 
 Submission checks:
 

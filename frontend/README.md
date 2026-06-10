@@ -217,7 +217,7 @@ Zustand Store (hydrated from backend; cached in localStorage)
 | **Vercel** | Production hosting |
 | **localStorage** | Short-lived offline/demo cache via Zustand persist middleware |
 
-Backend implementation files live in `frontend/backend`, while `frontend/src/app/api/*` contains the thin Next.js route-handler entrypoints required by the App Router.
+Backend implementation files live in root `backend`, while `frontend/src/app/api/*` contains the thin Next.js route-handler entrypoints required by the App Router.
 
 ### Required Environment Variables
 
@@ -446,11 +446,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 verdant-carbon-intelligence-platform/
 ├── README.md
+├── backend/
+│   ├── api/                         # Validation, sessions, HTTP helpers
+│   ├── db/                          # Drizzle schema, Neon client, bootstrap
+│   └── services/                    # Carbon, challenges, insights, rate limits
 └── frontend/
-    ├── backend/
-    │   ├── api/                     # Validation, sessions, HTTP helpers
-    │   ├── db/                      # Drizzle schema, Neon client, bootstrap
-    │   └── services/                # Carbon, challenges, insights, rate limits
     ├── src/
     │   ├── app/
     │   │   ├── page.tsx             # 🏠 Home — Carbon Observatory

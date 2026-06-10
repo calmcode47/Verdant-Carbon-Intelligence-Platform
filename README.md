@@ -17,15 +17,15 @@ Verdant is a full-stack carbon intelligence assistant for an **Urban Professiona
 ## Architecture
 
 ```text
+backend/                   API validation, session, database, and service layer
 frontend/
   src/app/                 Next.js App Router pages and API route handlers
   src/components/three/    Earth globe, data orbs, neural core, WebGL fallbacks
   src/lib/                 API client, performance helpers, utilities
   src/store/               Zustand frontend state hydrated from backend APIs
-  backend/                 API validation, session, database, and service layer
 ```
 
-Backend implementation files live in `frontend/backend`. The Next.js route handlers in `frontend/src/app/api/*` are thin HTTP entrypoints that validate requests and call the backend service layer.
+Backend implementation files live in root `backend`. The Next.js route handlers in `frontend/src/app/api/*` are thin HTTP entrypoints that validate requests and call the backend service layer.
 
 Primary backend routes:
 

@@ -495,6 +495,120 @@ export default function InsightsPage() {
             </div>
           </header>
 
+          {/* ================= AI CHAT INTERFACE ================= */}
+          <section className="space-y-6">
+            <div className="border-b border-[#7C3AED]/10 pb-3 flex flex-col md:flex-row md:items-end justify-between gap-2">
+              <div>
+                <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-wider text-white">
+                  GEMINI CARBON ADVISOR
+                </h2>
+                <p className="font-sans text-xs text-slate-400 mt-1">
+                  Ask Gemini first: get a practical carbon reduction answer before exploring the detailed analysis grid.
+                </p>
+              </div>
+            </div>
+
+            {/* Chat Frame */}
+            <div className="bg-[#0b082e]/55 border border-[#7C3AED]/20 rounded-3xl p-5 md:p-6 backdrop-blur-md flex flex-col h-[480px] relative overflow-hidden">
+              {/* Corner Ticks */}
+              <span className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#00E5FF]" />
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#00E5FF]" />
+              <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#7C3AED]" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#7C3AED]" />
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 scrollbar-thin scrollbar-thumb-[#7C3AED]/20 scrollbar-track-transparent">
+                {chatMessages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className={`flex items-start gap-3.5 max-w-[85%] ${
+                      msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''
+                    }`}
+                  >
+                    {/* Avatar Icon */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border flex-shrink-0 ${
+                      msg.sender === 'user' 
+                        ? 'bg-[#7C3AED]/20 border-[#7C3AED]' 
+                        : 'bg-[#00E5FF]/20 border-[#00E5FF]'
+                    }`}>
+                      {msg.sender === 'user' ? <User className="w-4 h-4 text-[#7C3AED]" /> : <Cpu className="w-4 h-4 text-[#00E5FF]" />}
+                    </div>
+
+                    {/* Speech Bubble */}
+                    <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                      msg.sender === 'user' 
+                        ? 'bg-[#7C3AED]/65 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]' 
+                        : 'bg-[#06041A]/75 text-slate-200 border border-[#7C3AED]/15'
+                    }`}>
+                      {msg.sender === 'ai' && msg.isNew ? (
+                        <Typewriter text={msg.text} onComplete={() => delete msg.isNew} />
+                      ) : (
+                        <span className="whitespace-pre-line">{msg.text}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {isChatLoading && (
+                  <div className="flex items-start gap-3.5 max-w-[80%]">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-[#00E5FF]/20 border-[#00E5FF] animate-pulse">
+                      <Cpu className="w-4 h-4 text-[#00E5FF]" />
+                    </div>
+                    {/* Skeleton loading bubbles */}
+                    <div className="bg-[#06041A]/75 border border-[#7C3AED]/15 rounded-2xl px-4 py-3 text-xs text-slate-400 space-y-1.5 w-64 animate-pulse">
+                      <div className="h-3 bg-[#7C3AED]/25 w-3/4 rounded" />
+                      <div className="h-3 bg-[#7C3AED]/15 w-5/6 rounded" />
+                      <div className="h-3 bg-[#7C3AED]/15 w-2/3 rounded" />
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Chat Chips Preset Questions */}
+              <div className="flex flex-wrap gap-2 mb-4 border-t border-[#7C3AED]/10 pt-3">
+                {[
+                  "How can I reduce my transport emissions?",
+                  "What's my biggest carbon source?",
+                  "Give me a 7-day reduction plan",
+                  "How does my footprint compare globally?"
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleSendMessage(chip)}
+                    className="bg-[#06041A] border border-[#7C3AED]/20 hover:border-[#00E5FF]/60 text-slate-400 hover:text-white px-3 py-1.5 rounded-full text-[10px] font-mono transition-colors cursor-pointer select-none"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chat Input Field */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage(userInput);
+                }} 
+                className="flex items-center gap-3 relative"
+              >
+                <input
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder="Ask Gemini Carbon Advisor (e.g. Give me a 7-day commute reduction plan...)"
+                  className="flex-1 bg-[#06041A]/85 border border-[#7C3AED]/35 focus:border-[#00E5FF] focus:outline-none rounded-2xl px-4 py-3.5 text-xs text-white placeholder-slate-500 font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+                />
+                <button
+                  type="submit"
+                  disabled={!userInput.trim() || isChatLoading}
+                  className="bg-gradient-to-tr from-[#7C3AED] to-[#00E5FF] hover:opacity-90 disabled:opacity-50 text-black p-3.5 rounded-2xl transition-all duration-300 flex-shrink-0 cursor-pointer shadow-[0_0_15px_rgba(124,58,237,0.2)]"
+                >
+                  <Send className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </form>
+            </div>
+          </section>
+
           {/* ================= MAIN INSIGHTS GRID ================= */}
           <section className="space-y-6">
             <h2 className="font-heading text-2xl font-bold tracking-wider text-white border-b border-[#7C3AED]/10 pb-3 flex items-center space-x-2">
@@ -718,120 +832,6 @@ export default function InsightsPage() {
                 })}
               </div>
             )}
-          </section>
-
-          {/* ================= AI CHAT INTERFACE ================= */}
-          <section className="space-y-6">
-            <div className="border-b border-[#7C3AED]/10 pb-3 flex flex-col md:flex-row md:items-end justify-between gap-2">
-              <div>
-                <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-wider text-white">
-                  ASK GEMINI AI
-                </h2>
-                <p className="font-sans text-xs text-slate-400 mt-1">
-                  Ask any question about your carbon footprint
-                </p>
-              </div>
-            </div>
-
-            {/* Chat Frame */}
-            <div className="bg-[#0b082e]/55 border border-[#7C3AED]/20 rounded-3xl p-5 md:p-6 backdrop-blur-md flex flex-col h-[480px] relative overflow-hidden">
-              {/* Corner Ticks */}
-              <span className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#00E5FF]" />
-              <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#00E5FF]" />
-              <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#7C3AED]" />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#7C3AED]" />
-
-              {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 scrollbar-thin scrollbar-thumb-[#7C3AED]/20 scrollbar-track-transparent">
-                {chatMessages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={`flex items-start gap-3.5 max-w-[85%] ${
-                      msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''
-                    }`}
-                  >
-                    {/* Avatar Icon */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border flex-shrink-0 ${
-                      msg.sender === 'user' 
-                        ? 'bg-[#7C3AED]/20 border-[#7C3AED]' 
-                        : 'bg-[#00E5FF]/20 border-[#00E5FF]'
-                    }`}>
-                      {msg.sender === 'user' ? <User className="w-4 h-4 text-[#7C3AED]" /> : <Cpu className="w-4 h-4 text-[#00E5FF]" />}
-                    </div>
-
-                    {/* Speech Bubble */}
-                    <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                      msg.sender === 'user' 
-                        ? 'bg-[#7C3AED]/65 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]' 
-                        : 'bg-[#06041A]/75 text-slate-200 border border-[#7C3AED]/15'
-                    }`}>
-                      {msg.sender === 'ai' && msg.isNew ? (
-                        <Typewriter text={msg.text} onComplete={() => delete msg.isNew} />
-                      ) : (
-                        <span className="whitespace-pre-line">{msg.text}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {isChatLoading && (
-                  <div className="flex items-start gap-3.5 max-w-[80%]">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center border bg-[#00E5FF]/20 border-[#00E5FF] animate-pulse">
-                      <Cpu className="w-4 h-4 text-[#00E5FF]" />
-                    </div>
-                    {/* Skeleton loading bubbles */}
-                    <div className="bg-[#06041A]/75 border border-[#7C3AED]/15 rounded-2xl px-4 py-3 text-xs text-slate-400 space-y-1.5 w-64 animate-pulse">
-                      <div className="h-3 bg-[#7C3AED]/25 w-3/4 rounded" />
-                      <div className="h-3 bg-[#7C3AED]/15 w-5/6 rounded" />
-                      <div className="h-3 bg-[#7C3AED]/15 w-2/3 rounded" />
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat Chips Preset Questions */}
-              <div className="flex flex-wrap gap-2 mb-4 border-t border-[#7C3AED]/10 pt-3">
-                {[
-                  "How can I reduce my transport emissions?",
-                  "What's my biggest carbon source?",
-                  "Give me a 7-day reduction plan",
-                  "How does my footprint compare globally?"
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    onClick={() => handleSendMessage(chip)}
-                    className="bg-[#06041A] border border-[#7C3AED]/20 hover:border-[#00E5FF]/60 text-slate-400 hover:text-white px-3 py-1.5 rounded-full text-[10px] font-mono transition-colors cursor-pointer select-none"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-
-              {/* Chat Input Field */}
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage(userInput);
-                }} 
-                className="flex items-center gap-3 relative"
-              >
-                <input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Ask Gemini AI (e.g. How do I decrease energy carbon...)"
-                  className="flex-1 bg-[#06041A]/85 border border-[#7C3AED]/35 focus:border-[#00E5FF] focus:outline-none rounded-2xl px-4 py-3.5 text-xs text-white placeholder-slate-500 font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
-                />
-                <button
-                  type="submit"
-                  disabled={!userInput.trim() || isChatLoading}
-                  className="bg-gradient-to-tr from-[#7C3AED] to-[#00E5FF] hover:opacity-90 disabled:opacity-50 text-black p-3.5 rounded-2xl transition-all duration-300 flex-shrink-0 cursor-pointer shadow-[0_0_15px_rgba(124,58,237,0.2)]"
-                >
-                  <Send className="w-4 h-4 stroke-[2.5]" />
-                </button>
-              </form>
-            </div>
           </section>
 
           {/* ================= CATEGORY DEEP-DIVE ================= */}

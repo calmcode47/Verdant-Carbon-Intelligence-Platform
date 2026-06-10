@@ -56,7 +56,7 @@ export function Navigation() {
   // Carbon Score configurations
   const carbonMax = 13.0; // World average baseline (kg CO2e)
   const percentage = Math.min(100, Math.round((animatedCarbon / carbonMax) * 100));
-  const radius = 16;
+  const radius = 14;
   const circumference = 2 * Math.PI * radius; // 100.53
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
@@ -77,21 +77,21 @@ export function Navigation() {
           backgroundColor: isScrolled ? 'rgba(10, 15, 13, 0.95)' : 'rgba(10, 15, 13, 0.7)',
           borderBottom: '1px solid rgba(0, 230, 118, 0.1)',
         }}
-        className="fixed top-0 left-0 right-0 z-50 h-16 w-full px-4 md:px-8 flex items-center justify-between backdrop-blur-md transition-all duration-300 select-none"
+        className="fixed top-0 left-0 right-0 z-50 h-12 w-full px-3 md:px-6 flex items-center justify-between backdrop-blur-md transition-all duration-300 select-none"
       >
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center space-x-2 group focus:outline-none" aria-label="Verdant Home">
-          <span className="font-display text-[28px] tracking-wider text-white group-hover:text-verdant-green transition-colors duration-300">
+        <Link href="/" className="flex items-center space-x-1.5 group focus:outline-none" aria-label="Verdant Home">
+          <span className="font-display text-[22px] tracking-wider text-white group-hover:text-verdant-green transition-colors duration-300">
             VERDANT
           </span>
-          <span className="relative flex h-2.5 w-2.5">
+          <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-verdant-green opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-verdant-green"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-verdant-green"></span>
           </span>
         </Link>
 
         {/* Central Nav Links (Desktop) */}
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-5">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -101,7 +101,7 @@ export function Navigation() {
                 style={{
                   textShadow: isActive ? '0 0 15px rgba(0, 230, 118, 0.5)' : undefined,
                 }}
-                className={`relative py-1 text-sm font-heading tracking-[0.05em] uppercase transition-colors duration-300 focus:outline-none focus:ring-1 focus:ring-verdant-green/45 px-1 rounded-sm ${
+                className={`relative py-1 text-xs font-heading tracking-[0.05em] uppercase transition-colors duration-300 focus:outline-none focus:ring-1 focus:ring-verdant-green/45 px-1 rounded-sm ${
                   isActive ? 'text-verdant-green font-semibold' : 'text-white/60 hover:text-verdant-green'
                 } group`}
               >
@@ -118,7 +118,7 @@ export function Navigation() {
         </div>
 
         {/* Carbon Score Widget & Hamburger Icon */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           
           {/* Carbon Score Progress Ring (Desktop/Mobile) */}
           <SimpleTooltip
@@ -130,8 +130,8 @@ export function Navigation() {
               </div>
             }
           >
-            <div className="flex flex-col items-center justify-center p-1 bg-slate-900/30 rounded-xl border border-slate-800/40 hover:border-verdant-green/20 transition-all duration-300 cursor-help">
-              <svg className="w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
+            <div className="flex items-center justify-center gap-1.5 px-2 py-1 bg-slate-900/30 rounded-lg border border-slate-800/40 hover:border-verdant-green/20 transition-all duration-300 cursor-help">
+              <svg className="w-7 h-7 transform -rotate-90" viewBox="0 0 40 40">
                 {/* Background track circle */}
                 <circle
                   cx="20"
@@ -154,7 +154,7 @@ export function Navigation() {
                 />
               </svg>
               {/* Number reading under circle */}
-              <span className="text-[9px] font-mono mt-0.5 text-slate-300 font-medium">
+              <span className="text-[9px] font-mono text-slate-300 font-medium leading-none">
                 {todayCarbon.toFixed(1)} kg
               </span>
             </div>
@@ -163,17 +163,17 @@ export function Navigation() {
           {/* Mobile hamburger menu toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-white/80 hover:text-verdant-green focus:outline-none focus:ring-2 focus:ring-verdant-green/50 rounded-xl"
+            className="md:hidden p-1.5 text-white/80 hover:text-verdant-green focus:outline-none focus:ring-2 focus:ring-verdant-green/50 rounded-lg"
             aria-label={isOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isOpen}
           >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </nav>
 
       {/* Spacer to push page content down below the fixed header */}
-      <div className="h-16 w-full" />
+      <div className="h-12 w-full" />
 
       {/* Hamburger full-screen layout */}
       <AnimatePresence>

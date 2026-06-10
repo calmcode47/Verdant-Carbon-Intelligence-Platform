@@ -223,7 +223,7 @@ export default function LandingPage() {
         >
         
         {/* ================= SECTION 1: HERO ================= */}
-        <section className="relative w-full h-[calc(100vh-64px)] flex flex-col items-center justify-center overflow-hidden border-b border-slate-900">
+        <section className="relative w-full h-[calc(100vh-48px)] min-h-[680px] flex flex-col items-center justify-center overflow-hidden border-b border-slate-900">
           
           {/* Earth Background: WebGL when available, polished fallback otherwise */}
           <div className="absolute inset-0 z-0">
@@ -244,20 +244,20 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#050810] via-transparent to-[#050810]/40 pointer-events-none z-10" />
 
           {/* Hero Content Overlay */}
-          <div className="relative z-20 text-center px-4 max-w-4xl flex flex-col items-center select-none">
+          <div className="relative z-20 text-center px-4 sm:px-6 max-w-3xl mx-auto flex flex-col items-center justify-center select-none">
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="space-y-4 flex flex-col items-center"
+              className="w-full space-y-4 flex flex-col items-center"
             >
               {/* Eyebrow */}
-              <span className="font-mono text-xs tracking-[0.3em] uppercase text-verdant-green leading-none mb-1">
+              <span className="font-mono text-[10px] sm:text-xs tracking-[0.28em] uppercase text-verdant-green leading-none mb-1 text-center">
                 REAL-TIME CARBON INTELLIGENCE
               </span>
 
               {/* Title */}
-              <h1 className="font-display text-[clamp(4.2rem,11vw,11rem)] leading-[0.85] uppercase tracking-wide text-white whitespace-pre-line">
+              <h1 className="font-display text-[clamp(3.4rem,9.4vw,9rem)] leading-[0.88] uppercase tracking-wide text-white whitespace-pre-line text-center">
                 KNOW YOUR<br />
                 <span className="gradient-text drop-shadow-[0_0_25px_rgba(0,230,118,0.25)]">CARBON.</span><br />
                 OWN YOUR<br />
@@ -265,27 +265,27 @@ export default function LandingPage() {
               </h1>
 
               {/* Subtitle */}
-              <p className="text-lg font-heading text-white/70 max-w-[520px] mx-auto mt-6 leading-relaxed">
+              <p className="text-base sm:text-lg font-heading text-white/70 max-w-[560px] mx-auto mt-4 leading-relaxed text-center">
                 Verdant tracks your daily emissions, learns your habits, and guides you toward a sustainable life — powered by AI.
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 mt-8">
-                <Link href="/dashboard" className="focus:outline-none">
+              <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-7">
+                <Link href="/dashboard" className="w-full sm:w-auto focus:outline-none">
                   <motion.button
                     whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(0, 230, 118, 0.5)' }}
                     whileTap={{ scale: 0.98 }}
-                    className="px-8 py-3 rounded-xl bg-verdant-green text-black font-heading font-bold text-base hover:brightness-105 transition-all"
+                    className="w-full sm:w-48 h-12 px-6 rounded-xl bg-verdant-green text-black font-heading font-bold text-sm sm:text-base hover:brightness-105 transition-all flex items-center justify-center"
                   >
                     START TRACKING
                   </motion.button>
                 </Link>
 
-                <a href="#how-it-works" className="focus:outline-none">
+                <a href="#how-it-works" className="w-full sm:w-auto focus:outline-none">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.98 }}
-                    className="px-8 py-3 rounded-xl border border-verdant-green text-verdant-green font-heading font-bold text-base bg-transparent hover:bg-verdant-green/5 transition-all"
+                    className="w-full sm:w-48 h-12 px-6 rounded-xl border border-verdant-green text-verdant-green font-heading font-bold text-sm sm:text-base bg-transparent hover:bg-verdant-green/5 transition-all flex items-center justify-center"
                   >
                     SEE HOW IT WORKS
                   </motion.button>

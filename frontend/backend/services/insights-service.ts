@@ -45,6 +45,63 @@ function getDominantCategory(summary: CarbonSummary): ActivityCategory {
   ), 'transport');
 }
 
+function formatKg(value: number): string {
+  return `${Math.max(0, Math.round(value * 10) / 10).toFixed(1)} kg CO2e`;
+}
+
+function categoryTotal(summary: CarbonSummary, category: ActivityCategory): number {
+  return Number(summary.categoryBreakdown[category] || 0);
+}
+
+function buildFallbackChatResponse(question: string | undefined, activities: Activity[], summary: CarbonSummary): string | undefined {
+  if (!question?.trim()) return undefined;
+
+  const normalizedQuestion = question.toLowerCase();
+  const dominant = getDominantCategory(summary);
+  const dominantKg = categoryTotal(summary, dominant);
+  const weeklyTarget = Math.max(2, Math.round(Math.max(summary.week, dominantKg, 10) * 0.15));
+
+  if (normalizedQuestion.includes('7-day') || normalizedQuestion.includes('7 day') || normalizedQuestion.includes('week') || normalizedQuestion.includes('plan')) {
+    return [
+      `Here is a practical 7-day carbon reduction plan targeting about ${weeklyTarget} kg CO2e saved:`,
+      'Day 1: Log one normal commute, meal, and home-energy activity as your baseline.',
+      'Day 2: Replace one solo car trip with train, bus, cycling, or walking.',
+      'Day 3: Choose one plant-forward meal instead of beef or lamb.',
+      'Day 4: Reduce heating/cooling load for 4 hours and switch unused devices off.',
+      'Day 5: Avoid one non-essential purchase or delay it for 72 hours.',
+      'Day 6: Repeat the highest-saving action from the week.',
+      'Day 7: Review your category totals and convert the best action into a weekly challenge.',
+    ].join('\n');
+  }
+
+  if (normalizedQuestion.includes('biggest') || normalizedQuestion.includes('source') || normalizedQuestion.includes('highest')) {
+    return `Your biggest current carbon signal is ${dominant}, at ${formatKg(dominantKg)} in the active summary. Start there first: one repeatable change in the top category will outperform several tiny changes elsewhere. Recommended next action: ${dominant === 'transport' ? 'replace one car commute with transit or remote work' : dominant === 'food' ? 'swap one high-carbon meat meal for chicken, legumes, or vegetables' : dominant === 'energy' ? 'cut avoidable electricity/heating use during peak hours' : 'delay one purchase and reduce streaming/device standby time'}.`;
+  }
+
+  if (normalizedQuestion.includes('compare') || normalizedQuestion.includes('global') || normalizedQuestion.includes('average')) {
+    const direction = summary.percentageVsAverage > 0 ? 'above' : 'below';
+    return `Compared with Verdant’s daily benchmark, your current trend is ${Math.abs(summary.percentageVsAverage)}% ${direction} average. Today is ${formatKg(summary.today)} and this week is ${formatKg(summary.week)}. To improve the score fastest, keep daily totals under 13 kg CO2e and reduce the largest category by 10–15% this week.`;
+  }
+
+  if (normalizedQuestion.includes('transport') || normalizedQuestion.includes('commute') || normalizedQuestion.includes('car') || normalizedQuestion.includes('flight') || normalizedQuestion.includes('train')) {
+    return `For transport, prioritize mode shifts before small optimizations. Replace one solo car commute with train, bus, cycling, walking, or remote work. If you drive, combine errands into one route and avoid short cold-start trips. If flights appear in your logs, one avoided short flight can save more than many daily micro-actions. Track the swap for 7 days so Verdant can measure the actual kg CO2e reduction.`;
+  }
+
+  if (normalizedQuestion.includes('food') || normalizedQuestion.includes('meal') || normalizedQuestion.includes('diet') || normalizedQuestion.includes('beef') || normalizedQuestion.includes('dairy')) {
+    return `For food, the highest-impact move is reducing beef and lamb first, then dairy and food waste. Try a simple rule: make weekday lunches plant-forward and keep high-carbon meals intentional rather than default. Log meals by type for one week; if food is your top category, two swaps can usually save 4–8 kg CO2e weekly.`;
+  }
+
+  if (normalizedQuestion.includes('energy') || normalizedQuestion.includes('electric') || normalizedQuestion.includes('home') || normalizedQuestion.includes('heating') || normalizedQuestion.includes('cooling')) {
+    return `For home energy, start with controllable loads: heating/cooling setpoints, standby devices, laundry temperature, and peak-hour appliance use. Pick one action for 7 days, such as reducing HVAC use for 2–4 hours daily or washing cold. Log kWh or energy activity consistently so Verdant can separate real progress from normal day-to-day variation.`;
+  }
+
+  if (normalizedQuestion.includes('lifestyle') || normalizedQuestion.includes('shopping') || normalizedQuestion.includes('purchase') || normalizedQuestion.includes('streaming')) {
+    return `For lifestyle emissions, use a delay-and-reuse rule. Delay non-essential purchases for 72 hours, repair or borrow before buying, and reduce long background streaming on unused devices. This category improves fastest when you prevent one high-carbon purchase rather than trying to optimize many tiny habits.`;
+  }
+
+  return `Based on your current summary, focus first on ${dominant}, which is the strongest signal at ${formatKg(dominantKg)}. Choose one action you can repeat for 7 days, log it consistently, and compare the weekly total against your baseline. If you want the fastest next step, ask: “Give me a 7-day plan” or “What is my biggest carbon source?”`;
+}
+
 function fallbackInsights(activities: Activity[], summary: CarbonSummary): AIInsight[] {
   const dominant = getDominantCategory(summary);
   const generatedAt = new Date();
@@ -117,6 +174,32 @@ function parseGeminiJson(text: string): { insights?: AIInsight[]; summary?: stri
   }
 }
 
+function normalizeInsight(insight: Partial<AIInsight>, fallback: AIInsight, index: number): AIInsight {
+  const type = ['tip', 'warning', 'achievement', 'prediction'].includes(String(insight.type))
+    ? insight.type as AIInsight['type']
+    : fallback.type;
+  const difficulty = ['easy', 'medium', 'hard'].includes(String(insight.difficulty))
+    ? insight.difficulty as AIInsight['difficulty']
+    : fallback.difficulty;
+  const category = CATEGORIES.includes(insight.category as ActivityCategory)
+    ? insight.category as ActivityCategory
+    : fallback.category;
+
+  return {
+    id: String(insight.id || `gemini-${index}`).slice(0, 120),
+    type,
+    title: String(insight.title || fallback.title).slice(0, 100),
+    description: String(insight.description || fallback.description).slice(0, 600),
+    potentialSavingKg: Math.min(500, Math.max(0, Number(insight.potentialSavingKg ?? fallback.potentialSavingKg) || fallback.potentialSavingKg)),
+    difficulty,
+    category,
+    actionItems: Array.isArray(insight.actionItems) && insight.actionItems.length > 0
+      ? insight.actionItems.slice(0, 5).map((item) => String(item).slice(0, 160))
+      : fallback.actionItems,
+    generatedAt: new Date(),
+  };
+}
+
 export function buildInsightCacheKey(payload: unknown): string {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
@@ -134,13 +217,14 @@ export async function generateInsights(input: {
     ? input.summary as CarbonSummary
     : calculateSummary(activities);
   const fallback = fallbackInsights(activities, summary);
+  const fallbackChatResponse = buildFallbackChatResponse(input.userQuestion, activities, summary);
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return {
       insights: fallback,
       summary: `Analyzed ${activities.length} activities with deterministic Verdant rules. Add GEMINI_API_KEY for live AI reasoning.`,
-      chatResponse: input.userQuestion ? fallback[0].description : undefined,
+      chatResponse: fallbackChatResponse,
       source: 'fallback',
     };
   }
@@ -148,9 +232,13 @@ export async function generateInsights(input: {
   const ai = new GoogleGenAI({ apiKey });
   const prompt = [
     'You are Verdant, a carbon intelligence assistant for an urban professional.',
-    'Return strict JSON only with keys: insights, summary, chatResponse.',
+    'Return strict JSON only. No markdown, no prose outside JSON.',
+    'JSON shape: {"insights":[...],"summary":"...","chatResponse":"..."}',
     'insights must be an array of 3 to 4 objects matching: id, type, title, description, potentialSavingKg, difficulty, category, actionItems.',
     'Use only categories transport, food, energy, lifestyle and types tip, warning, achievement, prediction.',
+    'If userQuestion exists, answer that exact question first in chatResponse with 3 to 7 concise, practical sentences or a short newline plan.',
+    'Never leave chatResponse empty when userQuestion exists.',
+    'Include estimated kg CO2e impact when reasonable, but do not invent precise personal data beyond the supplied summary and activities.',
     'Base recommendations on practical actions: commute choice, meal swaps, home electricity, purchases, streaming, waste.',
     `User context: ${JSON.stringify(user)}`,
     `Carbon summary: ${JSON.stringify(summary)}`,
@@ -173,14 +261,9 @@ export async function generateInsights(input: {
     if (!parsed?.insights) throw new Error('Gemini returned invalid JSON.');
 
     return {
-      insights: parsed.insights.slice(0, 4).map((insight, index) => ({
-        ...fallback[index % fallback.length],
-        ...insight,
-        id: String(insight.id || `gemini-${index}`),
-        generatedAt: new Date(),
-      })),
+      insights: parsed.insights.slice(0, 4).map((insight, index) => normalizeInsight(insight, fallback[index % fallback.length], index)),
       summary: parsed.summary || `Analyzed ${activities.length} activities with Gemini.`,
-      chatResponse: parsed.chatResponse,
+      chatResponse: input.userQuestion ? (parsed.chatResponse?.trim() || fallbackChatResponse) : parsed.chatResponse,
       source: 'gemini',
     };
   } catch (error) {
@@ -188,7 +271,7 @@ export async function generateInsights(input: {
     return {
       insights: fallback,
       summary: `Analyzed ${activities.length} activities with deterministic Verdant fallback rules.`,
-      chatResponse: input.userQuestion ? fallback[0].description : undefined,
+      chatResponse: fallbackChatResponse,
       source: 'fallback',
     };
   }

@@ -2,13 +2,15 @@
 
 Verdant is a full-stack carbon intelligence assistant for an **Urban Professional** persona. It helps users understand, track, and reduce their carbon footprint across commute, meals, home energy, and lifestyle choices through server-side calculations, gamified progress, challenges, and AI-generated recommendations.
 
-**Production:** [https://frontend-five-ruby-77.vercel.app](https://frontend-five-ruby-77.vercel.app)
+**Frontend:** [https://frontend-five-ruby-77.vercel.app](https://frontend-five-ruby-77.vercel.app)  
+**Backend API:** [https://frontend-five-ruby-77.vercel.app/api/me](https://frontend-five-ruby-77.vercel.app/api/me)
 
 ## What It Does
 
 - Tracks daily carbon activities and stores durable anonymous-session data.
 - Calculates emissions, XP, levels, streaks, badges, summaries, and challenge progress on the server.
-- Generates structured AI insights and chat responses with Gemini, with deterministic fallback insights when the model is unavailable.
+- Prioritizes a Gemini Carbon Advisor chat on the Insights page, followed by structured analysis cards.
+- Generates structured AI insights and chat responses with Gemini, with deterministic contextual fallback answers when the model is unavailable.
 - Renders immersive Three.js scenes with visible WebGL fallbacks for devices that cannot run WebGL.
 - Keeps the demo frictionless: no login wall, httpOnly session cookie, and localStorage only as a short-lived UI cache.
 
@@ -24,6 +26,14 @@ frontend/
 ```
 
 Backend implementation files live in `frontend/backend`. The Next.js route handlers in `frontend/src/app/api/*` are thin HTTP entrypoints that validate requests and call the backend service layer.
+
+Primary backend routes:
+
+- `GET /api/me`
+- `POST /api/activities`
+- `POST /api/insights`
+- `GET /api/summary`
+- `GET /api/challenges`
 
 ## Tech Stack
 

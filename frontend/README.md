@@ -143,9 +143,9 @@ The logging engine. A **Carbon Molecule** Three.js animation hovers above a cate
 ---
 
 ### 🔍 Insights — `/insights` · *The AI Oracle*
-The intelligence layer. Powered by **Google Gemini 3.5 Flash**, this page analyses your last 20 activities and returns structured, actionable insights. An interactive AI chat bubble lets you ask specific questions. A **NeuralCore** Three.js widget and deep violet aurora bokeh background set the AI mood.
+The intelligence layer. Powered by **Google Gemini 3.5 Flash**, this page prioritizes the **Gemini Carbon Advisor** chat immediately below the AI status header, then presents structured analysis cards and category deep-dives. A **NeuralCore** Three.js widget and deep violet aurora bokeh background set the AI mood.
 
-**Key features:** Gemini API integration with rich fallback, 4 insight types (Tip / Warning / Achievement / Prediction), difficulty and potential-saving labels, 4 Recharts visualisations, AI chat interface with contextual keyword matching.
+**Key features:** Gemini API integration with contextual deterministic fallback answers, 4 insight types (Tip / Warning / Achievement / Prediction), difficulty and potential-saving labels, 4 Recharts visualisations, priority AI chat interface with transport, food, energy, lifestyle, comparison, and 7-day-plan response paths.
 
 ---
 
@@ -406,7 +406,7 @@ The system prompt instructs Gemini to:
 | `prediction` | Projection based on current trajectory | "On track for 382 kg this month" |
 
 ### Fallback System
-When the Gemini API key is not configured (or rate-limited), Verdant serves **4 rich pre-crafted fallback insights** and keyword-aware chat responses, ensuring the app is fully demonstrable without any API setup.
+When the Gemini API key is not configured, invalid, or rate-limited, Verdant serves rich fallback insights and contextual chat responses for transport, food, energy, lifestyle, comparison, biggest-source, and 7-day-plan questions, ensuring the app is fully demonstrable without any API setup.
 
 ---
 

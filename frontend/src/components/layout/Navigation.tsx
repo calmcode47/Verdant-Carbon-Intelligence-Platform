@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { label: 'Insights', href: '/insights' },
   { label: 'Challenges', href: '/challenges' },
   { label: 'Profile', href: '/profile' },
+  { label: 'Demo', href: '/demo' },
 ];
 
 export function Navigation() {

@@ -1,4 +1,4 @@
-import { Activity, AIInsight, Challenge, UserProfile } from '@/types';
+import { Activity, AIInsight, Challenge, UserPreferences, UserProfile } from '@/types';
 import type { AppSnapshot } from '@/backend/services/types';
 
 export type CreateActivityPayload = {
@@ -35,7 +35,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const verdantApi = {
   getSnapshot: () => requestJson<AppSnapshot>('/api/me'),
-  updateUser: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>>) =>
+  updateUser: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>> & { preferences?: Partial<UserPreferences> }) =>
     requestJson<AppSnapshot>('/api/me', {
       method: 'PATCH',
       body: JSON.stringify(patch),

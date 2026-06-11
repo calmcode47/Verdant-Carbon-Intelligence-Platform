@@ -22,10 +22,12 @@ export async function ensureDatabase(): Promise<void> {
           streak integer NOT NULL DEFAULT 1,
           level integer NOT NULL DEFAULT 1,
           xp integer NOT NULL DEFAULT 120,
+          preferences jsonb NOT NULL DEFAULT '{"dailyReminder":true,"weeklyReport":false,"milestoneAlerts":true,"useMetric":true,"defaultCategory":"transport","profileVisibility":"public","showOnLeaderboard":true}'::jsonb,
           joined_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences jsonb NOT NULL DEFAULT '{"dailyReminder":true,"weeklyReport":false,"milestoneAlerts":true,"useMetric":true,"defaultCategory":"transport","profileVisibility":"public","showOnLeaderboard":true}'::jsonb`;
       await sql`
         CREATE TABLE IF NOT EXISTS activities (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

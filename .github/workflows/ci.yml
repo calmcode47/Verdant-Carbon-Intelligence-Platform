@@ -27,3 +27,10 @@ jobs:
           SESSION_SECRET: ci-test-session-secret-with-sufficient-length
           NEXT_PUBLIC_APP_URL: https://example.vercel.app
           NEXT_PUBLIC_APP_NAME: Verdant
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          CI: true
+          SESSION_SECRET: ci-test-session-secret-with-sufficient-length
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_APP_NAME: Verdant

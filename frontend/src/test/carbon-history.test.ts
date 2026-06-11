@@ -75,6 +75,15 @@ describe('carbon history utilities', () => {
           earnedAt: new Date('2026-01-02'),
         }],
         joinedAt: new Date('2026-01-01'),
+        preferences: {
+          dailyReminder: true,
+          weeklyReport: false,
+          milestoneAlerts: true,
+          useMetric: true,
+          defaultCategory: 'transport',
+          profileVisibility: 'public',
+          showOnLeaderboard: true,
+        },
       },
       [activity({ carbonKg: 1.2, timestamp: new Date('2026-01-02') })],
       [{

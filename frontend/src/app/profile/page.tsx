@@ -187,8 +187,9 @@ function EditableNumber({
           onClick={() => { setDraft(String(value)); setEditing(true); }}
           className="p-2 rounded-lg transition-colors hover:bg-white/5"
           title="Edit"
+          aria-label={`Edit ${label}`}
         >
-          <Pencil size={13} style={{ color: C.amber }} />
+          <Pencil size={13} style={{ color: C.amber }} aria-hidden="true" />
         </button>
       )}
     </div>
@@ -196,12 +197,23 @@ function EditableNumber({
 }
 
 // ─── TOGGLE ───────────────────────────────────────────────────────────────────
-function Toggle({ value, onChange, id }: { value: boolean; onChange: (v: boolean) => void; id: string }) {
+function Toggle({
+  value,
+  onChange,
+  id,
+  label,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  id: string;
+  label: string;
+}) {
   return (
     <button
       id={id}
       role="switch"
       aria-checked={value}
+      aria-label={label}
       onClick={() => onChange(!value)}
       className="relative w-10 h-5 rounded-full transition-colors duration-200"
       style={{ background: value ? C.greenLt : 'rgba(255,255,255,0.12)' }}
@@ -278,17 +290,19 @@ export default function ProfilePage() {
   const goalPct     = Math.min(100, (monthlyGoal / avgMonthly) * 100);
   const savingsPct  = Math.max(0, Math.round(((avgMonthly - monthlyGoal) / avgMonthly) * 100));
 
-  // Settings state
-  const [settings, setSettings] = useState({
-    dailyReminder:    true,
-    weeklyReport:     false,
-    milestoneAlerts:  true,
-    useMetric:        true,
-    defaultCategory:  'transport',
-    profileVisibility:'public',
-    showLeaderboard:  true,
-  });
-  const set = (key: string, val: unknown) => setSettings(p => ({ ...p, [key]: val }));
+  const settings = user?.preferences ?? {
+    dailyReminder: true,
+    weeklyReport: false,
+    milestoneAlerts: true,
+    useMetric: true,
+    defaultCategory: 'transport' as const,
+    profileVisibility: 'public' as const,
+    showOnLeaderboard: true,
+  };
+
+  const updatePreference = async <K extends keyof typeof settings>(key: K, value: (typeof settings)[K]) => {
+    await updateUserProfile({ preferences: { [key]: value } });
+  };
 
   // Data management
   const [deleteInput,    setDeleteInput]    = useState('');
@@ -401,7 +415,8 @@ export default function ProfilePage() {
             >
               {/* Avatar */}
               <div className="relative mb-4">
-                <div
+                <button
+                  type="button"
                   className="w-[120px] h-[120px] rounded-full flex items-center justify-center text-6xl select-none cursor-pointer group"
                   style={{
                     background: 'rgba(46,125,50,0.12)',
@@ -409,14 +424,14 @@ export default function ProfilePage() {
                     boxShadow: `0 0 0 6px rgba(76,175,80,0.12), 0 0 30px rgba(76,175,80,0.25)`,
                   }}
                   onClick={() => fileInputRef.current?.click()}
-                  title="Click to change avatar"
+                  aria-label="Change profile avatar"
                 >
                   <span className="transition-transform group-hover:scale-110">{avatarEmoji}</span>
                   <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ background: 'rgba(0,0,0,0.45)' }}>
-                    <Camera size={24} style={{ color: C.cream }} />
+                    <Camera size={24} style={{ color: C.cream }} aria-hidden="true" />
                   </div>
-                </div>
+                </button>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -673,13 +688,13 @@ export default function ProfilePage() {
                     <span className="font-heading text-sm font-bold" style={{ color: C.cream }}>Notifications</span>
                   </div>
                   <SettingRow label="Daily activity reminder" sub="Nudge to log today's activities">
-                    <Toggle id="toggle-daily" value={settings.dailyReminder} onChange={v => set('dailyReminder', v)} />
+                    <Toggle id="toggle-daily" label="Daily reminder notifications" value={settings.dailyReminder} onChange={(v) => { void updatePreference('dailyReminder', v); }} />
                   </SettingRow>
                   <SettingRow label="Weekly carbon report" sub="Email digest every Monday">
-                    <Toggle id="toggle-weekly" value={settings.weeklyReport} onChange={v => set('weeklyReport', v)} />
+                    <Toggle id="toggle-weekly" label="Weekly carbon report emails" value={settings.weeklyReport} onChange={(v) => { void updatePreference('weeklyReport', v); }} />
                   </SettingRow>
                   <SettingRow label="Challenge milestone alerts" sub="Get notified on challenge progress">
-                    <Toggle id="toggle-milestone" value={settings.milestoneAlerts} onChange={v => set('milestoneAlerts', v)} />
+                    <Toggle id="toggle-milestone" label="Milestone alert notifications" value={settings.milestoneAlerts} onChange={(v) => { void updatePreference('milestoneAlerts', v); }} />
                   </SettingRow>
                 </div>
 
@@ -698,7 +713,7 @@ export default function ProfilePage() {
                         <button
                           key={u}
                           id={`unit-${u}`}
-                          onClick={() => set('useMetric', u === 'kg')}
+                          onClick={() => { void updatePreference('useMetric', u === 'kg'); }}
                           className="px-3 py-1 font-mono text-xs transition-colors"
                           style={{
                             background: (u === 'kg') === settings.useMetric ? C.greenLt : 'transparent',
@@ -713,8 +728,9 @@ export default function ProfilePage() {
                   <SettingRow label="Default tracking category">
                     <select
                       id="default-category"
+                      aria-label="Default tracking category"
                       value={settings.defaultCategory}
-                      onChange={e => set('defaultCategory', e.target.value)}
+                      onChange={(e) => { void updatePreference('defaultCategory', e.target.value as typeof settings.defaultCategory); }}
                       className="rounded-lg px-2 py-1 font-mono text-xs outline-none"
                       style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, color: C.cream }}
                     >
@@ -741,8 +757,9 @@ export default function ProfilePage() {
                   <SettingRow label="Profile visibility">
                     <select
                       id="profile-visibility"
+                      aria-label="Profile visibility"
                       value={settings.profileVisibility}
-                      onChange={e => set('profileVisibility', e.target.value)}
+                      onChange={(e) => { void updatePreference('profileVisibility', e.target.value as typeof settings.profileVisibility); }}
                       className="rounded-lg px-2 py-1 font-mono text-xs outline-none"
                       style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, color: C.cream }}
                     >
@@ -752,7 +769,7 @@ export default function ProfilePage() {
                     </select>
                   </SettingRow>
                   <SettingRow label="Appear on leaderboard" sub="Show your rank to others">
-                    <Toggle id="toggle-leaderboard" value={settings.showLeaderboard} onChange={v => set('showLeaderboard', v)} />
+                    <Toggle id="toggle-leaderboard" label="Appear on global leaderboard" value={settings.showOnLeaderboard} onChange={(v) => { void updatePreference('showOnLeaderboard', v); }} />
                   </SettingRow>
                 </div>
 

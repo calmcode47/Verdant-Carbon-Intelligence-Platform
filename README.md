@@ -70,6 +70,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Demo walkthrough
+
+Interactive 2-minute product tour (submission video substitute): append `/demo` to your deployment URL.
+
+Example: `https://frontend-five-ruby-77.vercel.app/demo`
+
 ## Validation
 
 Run checks from `frontend`:

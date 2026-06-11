@@ -10,12 +10,23 @@ export const createActivitySchema = z.object({
   timestamp: z.coerce.date().optional(),
 });
 
+export const userPreferencesSchema = z.object({
+  dailyReminder: z.boolean().optional(),
+  weeklyReport: z.boolean().optional(),
+  milestoneAlerts: z.boolean().optional(),
+  useMetric: z.boolean().optional(),
+  defaultCategory: activityCategorySchema.optional(),
+  profileVisibility: z.enum(['public', 'friends', 'private']).optional(),
+  showOnLeaderboard: z.boolean().optional(),
+});
+
 export const updateUserSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   email: z.string().trim().email().max(160).optional(),
   avatar: z.string().trim().max(80).optional(),
   location: z.string().trim().min(1).max(120).optional(),
   monthlyBudgetKg: z.coerce.number().positive().max(20_000).optional(),
+  preferences: userPreferencesSchema.optional(),
 });
 
 export const insightSchema = z.object({

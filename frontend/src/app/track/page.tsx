@@ -539,9 +539,10 @@ export default function TrackPage() {
                   <button
                     type="button"
                     onClick={() => adjustValue(-1)}
+                    aria-label="Decrease activity value"
                     className="p-2 bg-slate-900 border border-[#1A2420] hover:border-[#00E676]/40 text-[#00E676] rounded-xl hover:bg-[#004D00]/20 transition-all cursor-pointer"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-4 h-4" aria-hidden="true" />
                   </button>
 
                   <div className="flex items-baseline justify-center relative min-w-0 flex-1">
@@ -551,6 +552,7 @@ export default function TrackPage() {
                       min="0"
                       required
                       value={inputValue}
+                      aria-label="Activity quantity"
                       onChange={(e) => handleValueChange(e.target.value)}
                       className="bg-transparent border-none text-center font-mono font-bold text-4xl text-white w-24 focus:outline-none placeholder-slate-700 min-w-0"
                     />
@@ -562,9 +564,10 @@ export default function TrackPage() {
                   <button
                     type="button"
                     onClick={() => adjustValue(1)}
+                    aria-label="Increase activity value"
                     className="p-2 bg-slate-900 border border-[#1A2420] hover:border-[#00E676]/40 text-[#00E676] rounded-xl hover:bg-[#004D00]/20 transition-all cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
 
@@ -576,6 +579,7 @@ export default function TrackPage() {
                     max={activeCategory === 'transport' ? '200' : activeCategory === 'food' ? '5' : activeCategory === 'energy' ? '150' : '10'}
                     step={activeCategory === 'food' ? '0.05' : '1'}
                     value={inputValue}
+                    aria-label={`Adjust ${activeCategory} activity quantity`}
                     onChange={(e) => handleValueChange(e.target.value)}
                     className="w-full h-1 bg-[#1A2420] rounded-lg appearance-none cursor-pointer accent-[#00E676] focus:outline-none"
                   />
@@ -781,8 +785,8 @@ export default function TrackPage() {
                               ) : (
                                 <button
                                   onClick={() => setDeleteConfirmId(act.id)}
-                                  className="opacity-0 group-hover:opacity-100 p-2 bg-[#FF5252]/10 border border-[#FF5252]/20 text-[#FF5252] rounded-xl hover:bg-[#FF5252] hover:text-white transition-all focus:outline-none cursor-pointer"
-                                  aria-label="Delete entry"
+                                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-2 bg-[#FF5252]/10 border border-[#FF5252]/20 text-[#FF5252] rounded-xl hover:bg-[#FF5252] hover:text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 cursor-pointer"
+                                  aria-label={`Delete activity ${act.subCategory}`}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>

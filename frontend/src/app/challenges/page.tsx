@@ -19,6 +19,7 @@ import {
   mapChallengeToArena,
 } from '@/lib/challenge-mappers';
 import { ChallengesBackground } from '@/components/backgrounds';
+import { LeaderboardSection } from '@/components/challenges/LeaderboardSection';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { X, Plus, Share2, Trash2, Lock } from 'lucide-react';
 
@@ -787,6 +788,7 @@ export default function ChallengesPage() {
   const user = useCarbonStore((state) => state.user);
   const challenges = useCarbonStore((state) => state.challenges);
   const leaderboard = useCarbonStore((state) => state.leaderboard);
+  const leaderboardTotalWarriors = useCarbonStore((state) => state.leaderboardTotalWarriors);
   const level   = user?.level  ?? 1;
   const xp      = user?.xp     ?? 120;
   const streak  = user?.streak ?? 14;
@@ -795,9 +797,9 @@ export default function ChallengesPage() {
     () => challenges.map(mapChallengeToArena),
     [challenges],
   );
-  const { top: benchmarkLeaders, userEntry } = useMemo(
-    () => buildLeaderboardDisplay(leaderboard, streak),
-    [leaderboard, streak],
+  const { top: leaderboardTop, userEntry } = useMemo(
+    () => buildLeaderboardDisplay(leaderboard, user?.id ?? '', leaderboardTotalWarriors),
+    [leaderboard, user?.id, leaderboardTotalWarriors],
   );
   const badgeList = useMemo(
     () => buildDisplayBadges(user?.badges ?? []).map((badge) => ({
@@ -873,7 +875,9 @@ export default function ChallengesPage() {
               <div className="font-mono text-[11px] text-white/40 tracking-widest mb-1">YOUR RANK</div>
               <div className="font-mono text-2xl md:text-3xl" style={{ color: '#FFD600', textShadow: '0 0 20px rgba(255,214,0,0.4)' }}>
                 #{userEntry?.rank ?? '—'}
-                <span className="font-mono text-sm text-white/40 ml-2">IN YOUR LEADERBOARD</span>
+                <span className="font-mono text-sm text-white/40 ml-2">
+                  OF {leaderboardTotalWarriors.toLocaleString()} WARRIORS
+                </span>
               </div>
             </div>
 
@@ -916,49 +920,14 @@ export default function ChallengesPage() {
         </div>
       </section>
 
-      {/* ── GLOBAL LEADERBOARD ──────────────────────────────────────────── */}
-      <section className="relative z-10 px-4 sm:px-8 lg:px-16 pb-16">
-        <div className="max-w-7xl mx-auto">
-          <SectionTitle>COMMUNITY BENCHMARK LEADERBOARD</SectionTitle>
-          <p className="font-heading text-sm text-white/45 mb-4 -mt-2">
-            Top warriors are illustrative community benchmarks. Your live rank reflects your tracked progress.
-          </p>
-
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)' }}
-          >
-            {/* Table header */}
-            <div className="flex items-center gap-4 px-4 py-3 border-b border-white/5">
-              <div className="w-8 font-mono text-[9px] text-white/30 tracking-widest">RANK</div>
-              <div className="w-9 shrink-0" />
-              <div className="flex-1 font-mono text-[9px] text-white/30 tracking-widest">WARRIOR</div>
-              <div className="font-mono text-[9px] text-white/30 tracking-widest hidden sm:block shrink-0 w-28 text-right">CO₂ SAVED</div>
-              <div className="font-mono text-[9px] text-white/30 tracking-widest shrink-0 w-16 text-right">XP</div>
-              <div className="font-mono text-[9px] text-white/30 tracking-widest hidden md:block shrink-0 w-16 text-right">STREAK</div>
-            </div>
-
-            <div className="p-3 space-y-2">
-              {/* Top 10 */}
-              {benchmarkLeaders.map((entry, i) => (
-                <LeaderboardRow key={entry.rank} entry={entry} index={i} isUser={false} />
-              ))}
-
-              <div className="flex items-center gap-2 py-1 px-2">
-                <div className="flex-1 border-t border-dashed border-white/10" />
-                <span className="font-mono text-[9px] text-white/20">
-                  YOUR RANK: #{userEntry?.rank ?? '—'}
-                </span>
-                <div className="flex-1 border-t border-dashed border-white/10" />
-              </div>
-
-              {userEntry && (
-                <LeaderboardRow key="user" entry={userEntry} index={10} isUser />
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <LeaderboardSection
+        top={leaderboardTop}
+        userEntry={userEntry}
+        totalWarriors={leaderboardTotalWarriors}
+        renderRow={(entry, index, isUser) => (
+          <LeaderboardRow key={isUser ? 'user' : entry.rank} entry={entry} index={index} isUser={isUser} />
+        )}
+      />
 
       {/* ── ACHIEVEMENT BADGES ──────────────────────────────────────────── */}
       <section className="relative z-10 px-4 sm:px-8 lg:px-16 pb-16">

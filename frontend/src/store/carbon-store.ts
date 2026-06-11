@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Activity, UserProfile, AIInsight, Challenge, CarbonSummary, LeaderboardEntry } from '@/types';
+import { Activity, UserProfile, UserPreferences, AIInsight, Challenge, CarbonSummary, LeaderboardEntry } from '@/types';
 import { calculateCarbon, getXPForActivity } from '@/lib/carbon-calculator';
 import { CreateActivityPayload, normalizeSnapshot, verdantApi } from '@/lib/api-client';
 import type { AppSnapshot } from '@/backend/services/types';
@@ -19,6 +19,7 @@ interface CarbonStore {
   challenges: Challenge[];
   summary: CarbonSummary | null;
   leaderboard: LeaderboardEntry[];
+  leaderboardTotalWarriors: number;
   isLoading: boolean;
   
   // Actions
@@ -34,7 +35,7 @@ interface CarbonStore {
   syncFromBackend: () => Promise<void>;
   createActivity: (activity: CreateActivityPayload) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
-  updateUserProfile: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>>) => Promise<void>;
+  updateUserProfile: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>> & { preferences?: Partial<UserPreferences> }) => Promise<void>;
   createChallengeFromInsight: (insight: AIInsight) => Promise<void>;
   deleteAllData: () => Promise<void>;
   
@@ -58,6 +59,15 @@ const defaultUser: UserProfile = {
     { id: 'b1', name: 'Eco Starter', description: 'Created a Verdant profile', icon: 'Leaf', rarity: 'common', earnedAt: new Date() }
   ],
   joinedAt: new Date(),
+  preferences: {
+    dailyReminder: true,
+    weeklyReport: false,
+    milestoneAlerts: true,
+    useMetric: true,
+    defaultCategory: 'transport',
+    profileVisibility: 'public',
+    showOnLeaderboard: true,
+  },
 };
 
 const defaultChallenges: Challenge[] = [
@@ -131,6 +141,7 @@ export const useCarbonStore = create<CarbonStore>()(
         percentageVsAverage: 0,
       },
       leaderboard: defaultLeaderboard,
+      leaderboardTotalWarriors: defaultLeaderboard.length,
       isLoading: false,
       
       setUser: (user) => set({ user }),
@@ -142,6 +153,7 @@ export const useCarbonStore = create<CarbonStore>()(
           summary: normalized.summary,
           challenges: normalized.challenges,
           leaderboard: normalized.leaderboard,
+          leaderboardTotalWarriors: normalized.leaderboardTotalWarriors,
         });
       },
 

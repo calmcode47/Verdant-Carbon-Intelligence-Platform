@@ -20,6 +20,16 @@ export interface Activity {
   aiSuggestion?: string;
 }
 
+export interface UserPreferences {
+  dailyReminder: boolean;
+  weeklyReport: boolean;
+  milestoneAlerts: boolean;
+  useMetric: boolean;
+  defaultCategory: ActivityCategory;
+  profileVisibility: 'public' | 'friends' | 'private';
+  showOnLeaderboard: boolean;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -33,6 +43,7 @@ export interface UserProfile {
   xp: number;
   badges: Badge[];
   joinedAt: Date;
+  preferences: UserPreferences;
 }
 
 export interface CarbonSummary {
@@ -88,6 +99,7 @@ export interface LeaderboardEntry {
   reductionKg: number;
   xp: number;
   level: number;
+  streak?: number;
 }
 
 export interface EmissionFactor {

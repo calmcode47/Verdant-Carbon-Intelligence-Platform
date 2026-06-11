@@ -1006,8 +1006,8 @@ export default function DashboardPage() {
                                       console.error('Delete activity failed:', error instanceof Error ? error.message : error);
                                     });
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 p-2 bg-rose-500/10 border border-rose-500/20 text-[#FF5252] rounded-xl hover:bg-rose-500 hover:text-white transition-all focus:outline-none"
-                                  aria-label="Delete entry"
+                                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-2 bg-rose-500/10 border border-rose-500/20 text-[#FF5252] rounded-xl hover:bg-rose-500 hover:text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                                  aria-label={`Delete activity ${act.subCategory}`}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>

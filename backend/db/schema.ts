@@ -22,6 +22,15 @@ export const users = pgTable('users', {
   streak: integer('streak').notNull().default(1),
   level: integer('level').notNull().default(1),
   xp: integer('xp').notNull().default(120),
+  preferences: jsonb('preferences').notNull().default({
+    dailyReminder: true,
+    weeklyReport: false,
+    milestoneAlerts: true,
+    useMetric: true,
+    defaultCategory: 'transport',
+    profileVisibility: 'public',
+    showOnLeaderboard: true,
+  }),
   joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -36,7 +36,7 @@
 
 <div align="center">
 
-> **🔴 LIVE DEMO**: [frontend-five-ruby-77.vercel.app](https://frontend-five-ruby-77.vercel.app) &nbsp;·&nbsp; **📹 VIDEO**: [Watch 2-minute walkthrough](#)
+> **🔴 LIVE DEMO**: [frontend-five-ruby-77.vercel.app](https://frontend-five-ruby-77.vercel.app) &nbsp;·&nbsp; **📹 WALKTHROUGH**: [Interactive 2-minute demo tour](/demo)
 
 <br/>
 

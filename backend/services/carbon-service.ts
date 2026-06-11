@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto';
 import { and, desc, eq } from 'drizzle-orm';
-import { Activity, ActivityCategory, Badge, Challenge, LeaderboardEntry, UserProfile } from '@/types';
+import { Activity, ActivityCategory, Badge, Challenge, UserProfile } from '@/types';
 import { calculateCarbon, EMISSION_FACTORS, getXPForActivity } from '@/lib/carbon-calculator';
 import { getDb } from '@/backend/db/client';
 import { ensureDatabase } from '@/backend/db/bootstrap';
 import { activities, badges, challenges, DbActivity, DbBadge, DbChallenge, DbUser, insightCache, users } from '@/backend/db/schema';
 import { CreateActivityInput, InsightInput, UpdateUserInput } from '@/backend/api/validation';
+import { buildGlobalLeaderboard, buildMemoryLeaderboardSnapshot, registerMemoryWarrior } from './leaderboard-service';
+import { DEFAULT_PREFERENCES, mergePreferences, parsePreferences } from './preferences';
 import { AppSnapshot } from './types';
 
 const DEFAULT_BADGE: Badge = {
@@ -73,6 +75,7 @@ function createDefaultUser(id: string): UserProfile {
     xp: 120,
     badges: [DEFAULT_BADGE],
     joinedAt: new Date(),
+    preferences: { ...DEFAULT_PREFERENCES },
   };
 }
 
@@ -97,6 +100,7 @@ function getMemoryState(sessionId: string): MemoryState {
     challenges: createDefaultChallenges(user.id),
   };
   memory.set(sessionId, state);
+  registerMemoryWarrior(user);
   return state;
 }
 
@@ -150,25 +154,16 @@ export function calculateSummary(activityList: Activity[]): AppSnapshot['summary
   };
 }
 
-function buildLeaderboard(user: UserProfile): LeaderboardEntry[] {
-  const userReduction = Math.max(0, round(user.monthlyBudgetKg - user.totalCarbonKg, 1));
-  return [
-    { rank: 1, userId: 'u1', name: 'Alena Vance', avatar: '👩‍🔬', reductionKg: 125.4, xp: 1450, level: 3 },
-    { rank: 2, userId: 'u2', name: 'Julian Drake', avatar: '👨‍💻', reductionKg: 98.2, xp: 1200, level: 2 },
-    { rank: 3, userId: 'u3', name: 'Sophia Chen', avatar: '👩‍🎨', reductionKg: 85, xp: 950, level: 2 },
-    { rank: 4, userId: user.id, name: user.name, avatar: user.avatar, reductionKg: userReduction, xp: user.xp, level: user.level },
-  ]
-    .sort((a, b) => b.xp - a.xp)
-    .map((entry, index) => ({ ...entry, rank: index + 1 }));
-}
-
 function snapshotFromState(state: MemoryState): AppSnapshot {
+  registerMemoryWarrior(state.user);
+  const leaderboardSnapshot = buildMemoryLeaderboardSnapshot(state.user);
   return {
     user: state.user,
     activities: [...state.activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     summary: calculateSummary(state.activities),
     challenges: state.challenges,
-    leaderboard: buildLeaderboard(state.user),
+    leaderboard: leaderboardSnapshot.entries,
+    leaderboardTotalWarriors: leaderboardSnapshot.totalWarriors,
   };
 }
 
@@ -193,6 +188,7 @@ function mapDbUser(user: DbUser, userBadges: DbBadge[]): UserProfile {
       earnedAt: badge.earnedAt,
     })),
     joinedAt: user.joinedAt,
+    preferences: parsePreferences(user.preferences),
   };
 }
 
@@ -285,13 +281,15 @@ async function dbSnapshot(sessionId: string): Promise<AppSnapshot> {
 
   const mappedActivities = userActivities.map(mapDbActivity);
   const mappedUser = mapDbUser(user, userBadges);
+  const leaderboardSnapshot = await buildGlobalLeaderboard(mappedUser);
 
   return {
     user: mappedUser,
     activities: mappedActivities,
     summary: calculateSummary(mappedActivities),
     challenges: userChallenges.map(mapDbChallenge),
-    leaderboard: buildLeaderboard(mappedUser),
+    leaderboard: leaderboardSnapshot.entries,
+    leaderboardTotalWarriors: leaderboardSnapshot.totalWarriors,
   };
 }
 
@@ -359,6 +357,8 @@ function applyActivityRewards(state: MemoryState, activity: Activity): void {
       status: completed ? 'completed' : 'active',
     };
   });
+
+  registerMemoryWarrior(state.user);
 }
 
 export async function createActivity(sessionId: string, input: CreateActivityInput): Promise<AppSnapshot> {
@@ -482,17 +482,26 @@ export async function updateUser(sessionId: string, input: UpdateUserInput): Pro
   const db = getDb();
   if (!db) {
     const state = getMemoryState(sessionId);
-    state.user = { ...state.user, ...input };
+    state.user = {
+      ...state.user,
+      ...input,
+      preferences: input.preferences
+        ? mergePreferences(state.user.preferences, input.preferences)
+        : state.user.preferences,
+    };
+    registerMemoryWarrior(state.user);
     return snapshotFromState(state);
   }
 
   const user = await getOrCreateDbUser(sessionId);
+  const currentPreferences = parsePreferences(user.preferences);
   await db.update(users).set({
     ...(input.name ? { name: input.name } : {}),
     ...(input.email ? { email: input.email } : {}),
     ...(input.avatar ? { avatar: input.avatar } : {}),
     ...(input.location ? { location: input.location } : {}),
     ...(input.monthlyBudgetKg ? { monthlyBudgetKg: String(input.monthlyBudgetKg) } : {}),
+    ...(input.preferences ? { preferences: mergePreferences(currentPreferences, input.preferences) } : {}),
     updatedAt: new Date(),
   }).where(eq(users.id, user.id));
 

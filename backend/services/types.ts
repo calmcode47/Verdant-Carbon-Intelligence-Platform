@@ -6,6 +6,7 @@ export interface AppSnapshot {
   summary: CarbonSummary;
   challenges: Challenge[];
   leaderboard: LeaderboardEntry[];
+  leaderboardTotalWarriors: number;
 }
 
 export interface InsightsPayload {

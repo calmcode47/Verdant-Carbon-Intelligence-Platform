@@ -121,5 +121,22 @@ describe('server-side carbon workflow', () => {
     expect(snapshot.summary.categoryBreakdown).toEqual({ transport: 0, food: 0, energy: 0, lifestyle: 0 });
     expect(snapshot.challenges.length).toBeGreaterThanOrEqual(3);
     expect(snapshot.leaderboard.some((entry) => entry.userId === snapshot.user.id)).toBe(true);
+    expect(snapshot.leaderboardTotalWarriors).toBeGreaterThan(0);
+  });
+
+  it('persists profile preferences through the API', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+    const updated = await updateUser(sessionId(), {
+      preferences: {
+        weeklyReport: true,
+        showOnLeaderboard: false,
+        defaultCategory: 'food',
+      },
+    });
+
+    expect(updated.user.preferences.weeklyReport).toBe(true);
+    expect(updated.user.preferences.showOnLeaderboard).toBe(false);
+    expect(updated.user.preferences.defaultCategory).toBe('food');
+    expect(updated.leaderboard.some((entry) => entry.userId === updated.user.id)).toBe(false);
   });
 });

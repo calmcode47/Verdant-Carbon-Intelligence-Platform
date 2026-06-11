@@ -348,6 +348,8 @@ export default function LandingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-100px' }}
             className="flex flex-col md:flex-row overflow-x-auto md:overflow-x-scroll scrollbar-none snap-x snap-mandatory gap-6 pb-8 md:-mx-8 md:px-8 select-none"
+            tabIndex={0}
+            aria-label="How Verdant works steps"
           >
             {/* Step 1 */}
             <motion.div
@@ -553,6 +555,7 @@ export default function LandingPage() {
                   <Link href="/insights" className="hover:text-verdant-green transition-colors">AI Insights</Link>
                   <Link href="/challenges" className="hover:text-verdant-green transition-colors">Challenges</Link>
                   <Link href="/profile" className="hover:text-verdant-green transition-colors">Profile Hub</Link>
+                  <Link href="/demo" className="hover:text-verdant-green transition-colors">Demo Walkthrough</Link>
                 </div>
               </div>
             </div>
@@ -566,10 +569,11 @@ export default function LandingPage() {
                   type="email"
                   required
                   placeholder="Enter your email"
+                  aria-label="Email address for newsletter"
                   className="bg-[#070b13] border border-slate-900 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-verdant-green flex-1"
                 />
-                <Button type="submit" size="sm" className="h-9 px-4">
-                  <Mail className="w-4 h-4" />
+                <Button type="submit" size="sm" className="h-9 px-4" aria-label="Subscribe to newsletter">
+                  <Mail className="w-4 h-4" aria-hidden="true" />
                 </Button>
               </form>
             </div>

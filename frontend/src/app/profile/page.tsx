@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -22,6 +22,13 @@ import {
   Cell,
 } from 'recharts';
 import { useCarbonStore } from '@/store/carbon-store';
+import {
+  activitiesToCsv,
+  build30DayHistory,
+  buildDisplayBadges,
+  buildJourneyMilestones,
+  type DisplayBadge,
+} from '@/lib/carbon-history';
 import { ProfileBackground } from '@/components/backgrounds';
 import {
   Pencil,
@@ -53,50 +60,12 @@ const C = {
   muted:   'rgba(255,248,240,0.40)',
 };
 
-// ─── MILESTONE DATA ──────────────────────────────────────────────────────────
-const MILESTONES = [
-  { date: 'Jan 14 2025', icon: '🌱', title: 'First Log',          desc: 'Logged your first activity — a 12km car trip.',            side: 'right' },
-  { date: 'Jan 21 2025', icon: '🔥', title: '7-Day Streak',       desc: 'Maintained a full week of daily carbon logging.',           side: 'left'  },
-  { date: 'Feb 03 2025', icon: '🏅', title: 'First Badge Earned', desc: 'Unlocked "First Step" for getting started.',                side: 'right' },
-  { date: 'Feb 18 2025', icon: '✅', title: 'Challenge Complete',  desc: 'Finished "Zero Emission Commute" — earned 200 XP.',         side: 'left'  },
-  { date: 'Mar 05 2025', icon: '🌿', title: 'Best Day Ever',       desc: 'Emitted only 3.1 kg CO₂e — your personal best.',            side: 'right' },
-  { date: 'Apr 12 2025', icon: '⚡', title: 'Level 3 Reached',    desc: 'Passed 3,000 XP and climbed to Level 3.',                   side: 'left'  },
-  { date: 'May 28 2025', icon: '🚲', title: 'Cycle Hero',         desc: '50 km cycled in a single week — badge unlocked!',           side: 'right' },
-];
-
-// ─── BADGE DATA (matching challenges page) ───────────────────────────────────
-const ALL_BADGES = [
-  { id: 'first_log',    name: 'First Step',       icon: '🌱', rarity: 'common',    earned: true  },
-  { id: 'week_streak',  name: 'Week Warrior',     icon: '🔥', rarity: 'common',    earned: true  },
-  { id: 'carbon_saver', name: 'Carbon Saver',     icon: '🌿', rarity: 'rare',      earned: true  },
-  { id: 'vegan_day',    name: 'Plant Powered',    icon: '🥗', rarity: 'rare',      earned: false },
-  { id: 'bike_commuter',name: 'Cycle Hero',       icon: '🚲', rarity: 'rare',      earned: false },
-  { id: 'energy_wizard',name: 'Energy Wizard',    icon: '⚡', rarity: 'epic',      earned: false },
-];
-
 const RARITY_COLOR: Record<string, string> = {
   common:    '#9CA3AF',
   rare:      '#3B82F6',
   epic:      '#A855F7',
   legendary: '#FFD600',
 };
-
-// ─── 30-DAY MOCK HISTORY ─────────────────────────────────────────────────────
-function make30DayData() {
-  const data: { label: string; kg: number }[] = [];
-  const now = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const label = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-    // Realistic random daily carbon 4–18 kg
-    const base  = 8 + Math.sin(i * 0.6) * 3;
-    const noise = (Math.random() - 0.5) * 4;
-    data.push({ label, kg: Math.max(2, +(base + noise).toFixed(1)) });
-  }
-  return data;
-}
-const HISTORY_DATA = make30DayData();
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function barColor(kg: number, goal: number) {
@@ -135,7 +104,7 @@ function StatCard({
 }
 
 // ─── HEXAGON BADGE ────────────────────────────────────────────────────────────
-function HexBadge({ badge }: { badge: typeof ALL_BADGES[0] }) {
+function HexBadge({ badge }: { badge: DisplayBadge }) {
   const color = badge.earned ? RARITY_COLOR[badge.rarity] : '#333';
   const size  = 56;
   const r     = size / 2;
@@ -268,7 +237,10 @@ function SettingRow({
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const user = useCarbonStore((state) => state.user);
+  const activities = useCarbonStore((state) => state.activities);
+  const challenges = useCarbonStore((state) => state.challenges);
   const updateUserProfile = useCarbonStore((state) => state.updateUserProfile);
+  const deleteAllData = useCarbonStore((state) => state.deleteAllData);
 
   const name          = user?.name          ?? 'Eco Warrior';
   const avatar        = user?.avatar        ?? '🌱';
@@ -277,7 +249,7 @@ export default function ProfilePage() {
   const xp            = user?.xp            ?? 120;
   const streak        = user?.streak        ?? 14;
   const totalCarbonKg = user?.totalCarbonKg ?? 0;
-  const badges        = user?.badges        ?? [];
+  const badges = user?.badges ?? [];
 
   // Level title
   const levelTitles: Record<number, string> = {
@@ -322,30 +294,55 @@ export default function ProfilePage() {
   const [deleteInput,    setDeleteInput]    = useState('');
   const [showDeleteConf, setShowDeleteConf] = useState(false);
   const [exportDone,     setExportDone]     = useState(false);
+  const [deleteError,    setDeleteError]    = useState('');
+  const [isDeleting,     setIsDeleting]     = useState(false);
+
+  const historyData = useMemo(() => build30DayHistory(activities), [activities]);
+  const milestones = useMemo(
+    () => buildJourneyMilestones(user, activities, challenges),
+    [user, activities, challenges],
+  );
+  const displayBadges = useMemo(() => buildDisplayBadges(user?.badges ?? []), [user?.badges]);
 
   const handleExport = () => {
-    const rows  = HISTORY_DATA.map(d => `${d.label},${d.kg}`).join('\n');
-    const blob  = new Blob([`Date,kg CO2e\n${rows}`], { type: 'text/csv' });
-    const url   = URL.createObjectURL(blob);
-    const a     = document.createElement('a');
-    a.href      = url;
-    a.download  = 'verdant-carbon-history.csv';
+    const csv = activitiesToCsv(activities);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'verdant-carbon-activities.csv';
     a.click();
     URL.revokeObjectURL(url);
     setExportDone(true);
     setTimeout(() => setExportDone(false), 2000);
   };
 
+  const handleDeleteAll = async () => {
+    setDeleteError('');
+    setIsDeleting(true);
+    try {
+      await deleteAllData();
+      setDeleteInput('');
+      setShowDeleteConf(false);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete data.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Avatar upload ref
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarEmoji, setAvatarEmoji] = useState(avatar);
 
-  // Carbon history stats
-  const last30Total   = HISTORY_DATA.reduce((s, d) => s + d.kg, 0);
-  const last30Avg     = last30Total / HISTORY_DATA.length;
-  const globalAvg     = 13;
-  const savedVsAvg    = (globalAvg * 30 - last30Total).toFixed(1);
-  const challengesDone = badges.length;
+  const last30Total = historyData.reduce((sum, day) => sum + day.kg, 0);
+  const last30Avg = historyData.length > 0 ? last30Total / historyData.length : 0;
+  const globalAvg = 13;
+  const savedVsAvg = (globalAvg * 30 - last30Total).toFixed(1);
+  const challengesDone = challenges.filter((challenge) => challenge.status === 'completed').length;
+  const joinedLabel = user?.joinedAt
+    ? `Member since ${new Date(user.joinedAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`
+    : 'Member since joining Verdant';
 
   return (
     <>
@@ -465,7 +462,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-2 font-body text-sm" style={{ color: C.muted }}>
                   <Calendar size={13} style={{ color: C.amber }} />
-                  Member since Jan 2025
+                  {joinedLabel}
                 </div>
               </div>
 
@@ -497,8 +494,8 @@ export default function ProfilePage() {
               />
               <StatCard
                 label="CHALLENGES COMPLETED"
-                value={`${challengesDone} / 6`}
-                sub="active challenges"
+                value={`${challengesDone} / ${challenges.length}`}
+                sub="challenges completed"
                 color={C.amberLt}
               />
               <StatCard
@@ -522,7 +519,7 @@ export default function ProfilePage() {
                 </Link>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
-                {ALL_BADGES.map(b => <HexBadge key={b.id} badge={b} />)}
+                {displayBadges.map((badge) => <HexBadge key={badge.id} badge={badge} />)}
               </div>
             </div>
           </motion.div>
@@ -555,7 +552,7 @@ export default function ProfilePage() {
                 />
 
                 <div className="space-y-5">
-                  {MILESTONES.map((m, i) => (
+                  {milestones.map((m, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: m.side === 'left' ? -30 : 30 }}
@@ -807,12 +804,13 @@ export default function ProfilePage() {
                             style={{ background: 'rgba(211,47,47,0.08)', border: '1px solid rgba(211,47,47,0.4)', color: '#F44336' }}
                           />
                           <button
-                            disabled={deleteInput !== 'DELETE'}
-                            onClick={() => { setDeleteInput(''); setShowDeleteConf(false); alert('All data deleted.'); }}
+                            disabled={deleteInput !== 'DELETE' || isDeleting}
+                            onClick={handleDeleteAll}
+                            aria-busy={isDeleting}
                             className="px-3 py-1.5 rounded-lg font-heading text-sm disabled:opacity-30"
                             style={{ background: '#D32F2F', color: 'white' }}
                           >
-                            Confirm
+                            {isDeleting ? 'Deleting…' : 'Confirm'}
                           </button>
                           <button
                             onClick={() => { setShowDeleteConf(false); setDeleteInput(''); }}
@@ -822,6 +820,9 @@ export default function ProfilePage() {
                             Cancel
                           </button>
                         </div>
+                        {deleteError && (
+                          <p className="font-body text-xs" role="alert" style={{ color: '#F44336' }}>{deleteError}</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -869,8 +870,12 @@ export default function ProfilePage() {
                   ))}
                 </div>
 
+                <div
+                  role="img"
+                  aria-label={`30-day carbon history chart. Daily average ${last30Avg.toFixed(1)} kg CO₂e versus global average ${globalAvg} kg per day.`}
+                >
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={HISTORY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 4 }} barCategoryGap="20%">
+                  <BarChart data={historyData} margin={{ top: 4, right: 4, left: -20, bottom: 4 }} barCategoryGap="20%">
                     <XAxis
                       dataKey="label"
                       tick={{ fontSize: 9, fill: 'rgba(255,248,240,0.3)', fontFamily: 'DM Mono' }}
@@ -922,12 +927,16 @@ export default function ProfilePage() {
                       }}
                     />
                     <Bar dataKey="kg" radius={[3, 3, 0, 0]}>
-                      {HISTORY_DATA.map((d, i) => (
+                      {historyData.map((d, i) => (
                         <Cell key={i} fill={barColor(d.kg, monthlyGoal / 30)} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
+                <p className="sr-only">
+                  {historyData.map((day) => `${day.label}: ${day.kg} kg`).join('. ')}
+                </p>
               </div>
             </div>
 

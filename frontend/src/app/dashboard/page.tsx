@@ -605,7 +605,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Main Content Layout Container */}
-          <main className={`${activeTab === 'metrics' ? 'block' : 'hidden md:block'} flex-1 p-6 md:p-8 space-y-8 max-w-7xl w-full mx-auto relative`}>
+          <div
+            role="region"
+            aria-label="Dashboard content"
+            className={`${activeTab === 'metrics' ? 'block' : 'hidden md:block'} flex-1 p-6 md:p-8 space-y-8 max-w-7xl w-full mx-auto relative`}
+          >
             
             {/* Aesthetic 3D Ambient Canvas (DataOrbs) in top-right */}
             <div className="absolute top-4 right-4 hidden lg:block select-none z-0">
@@ -1085,7 +1089,7 @@ export default function DashboardPage() {
               </>
             )}
 
-          </main>
+          </div>
         </div>
 
         </div>

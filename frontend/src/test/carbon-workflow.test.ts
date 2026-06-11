@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createActivity, createChallengeFromInsight, deleteActivity, getSnapshot, updateUser } from '@/backend/services/carbon-service';
+import {
+  createActivity,
+  createChallengeFromInsight,
+  deleteActivity,
+  deleteAllUserData,
+  getSnapshot,
+  updateUser,
+} from '@/backend/services/carbon-service';
 import { AIInsight } from '@/types';
 
 function sessionId(): string {
@@ -85,6 +92,25 @@ describe('server-side carbon workflow', () => {
     expect(first.challenges.some((challenge) => challenge.title === insight.title)).toBe(true);
     expect(matching).toHaveLength(1);
     expect(matching[0].xpReward).toBe(200);
+  });
+
+  it('wipes activities, badges, and challenge progress while preserving profile fields', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+    const session = sessionId();
+    await createActivity(session, {
+      category: 'transport',
+      subCategory: 'car_petrol',
+      value: 12,
+    });
+    await updateUser(session, { name: 'Reset Tester', location: 'Delhi, India' });
+
+    const wiped = await deleteAllUserData(session);
+    expect(wiped.activities).toHaveLength(0);
+    expect(wiped.user.name).toBe('Reset Tester');
+    expect(wiped.user.location).toBe('Delhi, India');
+    expect(wiped.user.totalCarbonKg).toBe(0);
+    expect(wiped.challenges.length).toBeGreaterThanOrEqual(3);
+    expect(wiped.challenges.every((challenge) => challenge.currentProgressKg === 0)).toBe(true);
   });
 
   it('returns a complete empty-state snapshot for new visitors', async () => {

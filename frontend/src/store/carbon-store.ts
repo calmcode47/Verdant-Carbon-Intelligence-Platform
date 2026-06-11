@@ -36,6 +36,7 @@ interface CarbonStore {
   deleteActivity: (id: string) => Promise<void>;
   updateUserProfile: (patch: Partial<Pick<UserProfile, 'name' | 'email' | 'avatar' | 'location' | 'monthlyBudgetKg'>>) => Promise<void>;
   createChallengeFromInsight: (insight: AIInsight) => Promise<void>;
+  deleteAllData: () => Promise<void>;
   
   // Computed
   getTodayActivities: () => Activity[];
@@ -191,6 +192,20 @@ export const useCarbonStore = create<CarbonStore>()(
         try {
           const snapshot = await verdantApi.createChallengeFromInsight(insight);
           get().applySnapshot(snapshot);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      deleteAllData: async () => {
+        set({ isLoading: true });
+        try {
+          const snapshot = await verdantApi.deleteAllData();
+          get().applySnapshot(snapshot);
+          set({ insights: [] });
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('verdant-store');
+          }
         } finally {
           set({ isLoading: false });
         }

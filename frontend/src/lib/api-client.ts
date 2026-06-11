@@ -54,6 +54,10 @@ export const verdantApi = {
       method: 'POST',
       body: JSON.stringify(insight),
     }),
+  deleteAllData: () =>
+    requestJson<AppSnapshot>('/api/me', {
+      method: 'DELETE',
+    }),
 };
 
 export function normalizeSnapshot(snapshot: AppSnapshot): AppSnapshot {

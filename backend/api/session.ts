@@ -4,8 +4,17 @@ import { NextRequest, NextResponse } from 'next/server';
 const COOKIE_NAME = 'verdant_session';
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
+const LOCAL_SESSION_SECRET = 'verdant-local-development-secret';
+
 function getSecret(): string {
-  return process.env.SESSION_SECRET || 'verdant-local-development-secret';
+  const secret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret || secret === LOCAL_SESSION_SECRET) {
+      throw new Error('SESSION_SECRET must be configured with a strong value in production.');
+    }
+    return secret;
+  }
+  return secret || LOCAL_SESSION_SECRET;
 }
 
 function sign(sessionId: string): string {

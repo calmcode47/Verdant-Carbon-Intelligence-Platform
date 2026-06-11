@@ -6,6 +6,7 @@ import { generateInsights } from '@/backend/services/insights-service';
 import { assertRateLimit } from '@/backend/services/rate-limit-service';
 
 export const runtime = 'nodejs';
+export const maxDuration = 15;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = getSession(req);

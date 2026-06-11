@@ -8,8 +8,16 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCarbonStore } from '@/store/carbon-store';
+import { buildDisplayBadges } from '@/lib/carbon-history';
+import {
+  ArenaChallengeView,
+  buildLeaderboardDisplay,
+  buildWeeklyProgress,
+  LeaderboardDisplayEntry,
+  mapChallengeToArena,
+} from '@/lib/challenge-mappers';
 import { ChallengesBackground } from '@/components/backgrounds';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { X, Plus, Share2, Trash2, Lock } from 'lucide-react';
@@ -32,155 +40,16 @@ const CATEGORY_ICONS: Record<string, string> = {
   lifestyle: '📱',
 };
 
-interface ArenaChallenge {
+type ArenaChallenge = ArenaChallengeView;
+
+interface BadgeView {
   id: string;
-  title: string;
-  category: string;
-  duration: 'daily' | 'weekly' | 'monthly';
+  name: string;
   description: string;
-  targetKg: number;
-  currentKg: number;
-  xpReward: number;
-  participants: number;
-  endsAt: Date;
-  status: 'active' | 'completed' | 'failed';
-  joined: boolean;
-  tips: string[];
+  icon: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  earned: boolean;
 }
-
-const ARENA_CHALLENGES: ArenaChallenge[] = [
-  {
-    id: 'ac1',
-    title: 'Zero Meat Week',
-    category: 'food',
-    duration: 'weekly',
-    description: 'Avoid all meat products for an entire week and help save up to 14 kg of CO₂.',
-    targetKg: 14,
-    currentKg: 9.2,
-    xpReward: 350,
-    participants: 1847,
-    endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000),
-    status: 'active',
-    joined: true,
-    tips: [
-      'Replace beef with lentils or beans — same protein, 20× less carbon.',
-      'Meal-prep plant-based dishes on Sunday to avoid temptation mid-week.',
-      'Try jackfruit or tempeh as a meat substitute in your favourite recipes.',
-      'Check restaurant menus for vegan options before going out.',
-      'Track each meat-free meal in Verdant to see your live carbon savings.',
-    ],
-  },
-  {
-    id: 'ac2',
-    title: 'Cycle to Work',
-    category: 'transport',
-    duration: 'daily',
-    description: 'Swap your car or transit commute for a bike. Save ~2 kg CO₂ every day.',
-    targetKg: 2,
-    currentKg: 1.4,
-    xpReward: 150,
-    participants: 3421,
-    endsAt: new Date(Date.now() + 18 * 60 * 60 * 1000 + 30 * 60 * 1000),
-    status: 'active',
-    joined: true,
-    tips: [
-      'Plan your route the night before using a cycling map app.',
-      'Carry a lightweight rain jacket so weather never stops you.',
-      'Lock your bike at a covered stand to protect against theft.',
-      'Combine cycling with transit on longer days (bike + train).',
-    ],
-  },
-  {
-    id: 'ac3',
-    title: 'Energy Audit',
-    category: 'energy',
-    duration: 'weekly',
-    description: 'Audit every appliance in your home and cut energy waste by at least 8 kg CO₂.',
-    targetKg: 8,
-    currentKg: 5.6,
-    xpReward: 280,
-    participants: 942,
-    endsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-    status: 'active',
-    joined: false,
-    tips: [
-      'Unplug chargers, TVs, and microwaves when not in use — standby kills.',
-      'Switch to LED bulbs in every socket if you haven\'t already.',
-      'Set your thermostat 2°C lower and wear a light jumper inside.',
-      'Run dishwashers and washing machines only on full loads.',
-      'Use smart plugs to auto-cut power to idle devices at midnight.',
-    ],
-  },
-  {
-    id: 'ac4',
-    title: 'Cold Wash Only',
-    category: 'energy',
-    duration: 'monthly',
-    description: 'Wash all laundry in cold water this month. Modern detergents work just as well at 30°C.',
-    targetKg: 3,
-    currentKg: 3,
-    xpReward: 120,
-    participants: 2108,
-    endsAt: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000),
-    status: 'completed',
-    joined: true,
-    tips: [
-      'Select the "cold" or "eco" cycle on your washing machine.',
-      'Use a cold-water laundry detergent for best results.',
-      'Air dry clothes instead of using a tumble dryer.',
-    ],
-  },
-  {
-    id: 'ac5',
-    title: 'Local Food Only',
-    category: 'food',
-    duration: 'weekly',
-    description: 'Source all your food from within 100 km this week. Cut transport emissions by 5 kg.',
-    targetKg: 5,
-    currentKg: 1.8,
-    xpReward: 220,
-    participants: 614,
-    endsAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
-    status: 'active',
-    joined: false,
-    tips: [
-      'Visit a local farmers\' market at the weekend for fresh produce.',
-      'Check supermarket labels for country of origin.',
-      'Grow herbs on your windowsill — the ultimate local food!',
-      'Join a community-supported agriculture (CSA) box scheme.',
-    ],
-  },
-  {
-    id: 'ac6',
-    title: 'Screen Time Limit',
-    category: 'lifestyle',
-    duration: 'daily',
-    description: 'Cap recreational screen time at 2 hours/day. Streaming and gaming carry hidden carbon costs.',
-    targetKg: 0.3,
-    currentKg: 0.1,
-    xpReward: 80,
-    participants: 788,
-    endsAt: new Date(Date.now() + 11 * 60 * 60 * 1000),
-    status: 'active',
-    joined: true,
-    tips: [
-      'Use your phone\'s built-in screen time tracker to set daily limits.',
-      'Replace evening scroll sessions with a walk or reading a book.',
-      'Download content for offline use to reduce streaming data.',
-    ],
-  },
-];
-
-const BADGES = [
-  { id: 'first_log',        name: 'First Step',        description: 'Log your first activity',           icon: '🌱', rarity: 'common',    earned: true  },
-  { id: 'week_streak',      name: 'Week Warrior',      description: '7-day logging streak',              icon: '🔥', rarity: 'common',    earned: true  },
-  { id: 'carbon_saver',     name: 'Carbon Saver',      description: 'Save 10 kg in a week',              icon: '🌿', rarity: 'rare',      earned: true  },
-  { id: 'vegan_day',        name: 'Plant Powered',     description: 'Zero animal products for a day',    icon: '🥗', rarity: 'rare',      earned: false },
-  { id: 'bike_commuter',    name: 'Cycle Hero',        description: 'Cycle 50 km in a week',             icon: '🚲', rarity: 'rare',      earned: false },
-  { id: 'energy_wizard',    name: 'Energy Wizard',     description: 'Reduce energy use by 50%',          icon: '⚡', rarity: 'epic',      earned: false },
-  { id: 'climate_champion', name: 'Climate Champion',  description: 'Under 5 kg/day for a month',        icon: '🏆', rarity: 'epic',      earned: false },
-  { id: 'carbon_neutral',   name: 'Carbon Neutral',    description: 'Net zero for a whole week',         icon: '🌍', rarity: 'legendary', earned: false },
-];
 
 const RARITY_STYLES: Record<string, { color: string; glow: string; label: string }> = {
   common:    { color: '#9CA3AF', glow: 'rgba(156,163,175,0.3)',  label: 'COMMON'    },
@@ -188,31 +57,6 @@ const RARITY_STYLES: Record<string, { color: string; glow: string; label: string
   epic:      { color: '#A855F7', glow: 'rgba(168,85,247,0.5)',   label: 'EPIC'      },
   legendary: { color: '#FFD600', glow: 'rgba(255,214,0,0.6)',    label: 'LEGENDARY' },
 };
-
-const LEADERBOARD_DATA = [
-  { rank: 1,  name: 'Aria Nakamura',  avatar: '👩‍🔬', level: 12, carbonSaved: 487.2, xp: 14200, streak: 42 },
-  { rank: 2,  name: 'Luca Fernandez', avatar: '🧑‍🌾', level: 11, carbonSaved: 421.8, xp: 12800, streak: 31 },
-  { rank: 3,  name: 'Priya Mehta',    avatar: '👩‍💻', level: 10, carbonSaved: 398.5, xp: 11400, streak: 28 },
-  { rank: 4,  name: 'Elias Müller',   avatar: '🧑‍🎓', level: 9,  carbonSaved: 356.1, xp: 9900,  streak: 22 },
-  { rank: 5,  name: 'Zara Osei',      avatar: '👩‍🎨', level: 8,  carbonSaved: 312.7, xp: 8700,  streak: 17 },
-  { rank: 6,  name: 'Kai Larsson',    avatar: '🧑‍🚀', level: 8,  carbonSaved: 289.4, xp: 7900,  streak: 14 },
-  { rank: 7,  name: 'Yuna Park',      avatar: '👩‍🏫', level: 7,  carbonSaved: 245.9, xp: 6800,  streak: 11 },
-  { rank: 8,  name: 'Mateo Silva',    avatar: '🧑‍🔧', level: 6,  carbonSaved: 198.3, xp: 5400,  streak: 9  },
-  { rank: 9,  name: 'Ingrid Johansson',avatar: '👩‍🌾',level: 5,  carbonSaved: 167.6, xp: 4200,  streak: 7  },
-  { rank: 10, name: 'Omar Hassan',    avatar: '🧑‍🍳', level: 4,  carbonSaved: 134.1, xp: 3100,  streak: 5  },
-  { rank: 47, name: 'Eco Warrior',    avatar: '🌱',    level: 1,  carbonSaved: 12.4,  xp: 120,   streak: 14, isUser: true },
-];
-
-// Mini sparkline mock data for the modal chart
-const PROGRESS_CHART_DATA = [
-  { day: 'Mon', kg: 0   },
-  { day: 'Tue', kg: 1.2 },
-  { day: 'Wed', kg: 2.8 },
-  { day: 'Thu', kg: 4.1 },
-  { day: 'Fri', kg: 5.6 },
-  { day: 'Sat', kg: 7.3 },
-  { day: 'Sun', kg: 9.2 },
-];
 
 // ─── HELPER: COUNTDOWN TIMER ────────────────────────────────────────────────
 function useCountdown(endsAt: Date) {
@@ -517,6 +361,7 @@ function ChallengeModal({
   if (!challenge) return null;
 
   const pct = Math.min(100, Math.round((challenge.currentKg / challenge.targetKg) * 100));
+  const progressChartData = buildWeeklyProgress(challenge.currentKg, challenge.targetKg);
 
   const handleShare = () => {
     const text = `🌍 I'm taking on the "${challenge.title}" challenge on Verdant! Join me in fighting climate change. #EcoWarrior #Verdant`;
@@ -594,7 +439,7 @@ function ChallengeModal({
         <div className="mb-5 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="font-mono text-[10px] text-white/40 tracking-widest mb-2">PROGRESS THIS WEEK</div>
           <ResponsiveContainer width="100%" height={80}>
-            <LineChart data={PROGRESS_CHART_DATA}>
+            <LineChart data={progressChartData}>
               <Line type="monotone" dataKey="kg" stroke={catColor} strokeWidth={2} dot={false} />
               <Tooltip
                 contentStyle={{ background: '#0D2412', border: `1px solid ${catColor}40`, borderRadius: 8, fontSize: 11 }}
@@ -676,7 +521,7 @@ function BadgeModal({
   badge,
   onClose,
 }: {
-  badge: (typeof BADGES)[0] | null;
+  badge: BadgeView | null;
   onClose: () => void;
 }) {
   if (!badge) return null;
@@ -725,7 +570,7 @@ function LeaderboardRow({
   index,
   isUser,
 }: {
-  entry: (typeof LEADERBOARD_DATA)[0];
+  entry: LeaderboardDisplayEntry;
   index: number;
   isUser: boolean;
 }) {
@@ -796,7 +641,10 @@ function LeaderboardRow({
 
 // ─── CUSTOM CHALLENGE FORM ────────────────────────────────────────────────────
 function CustomChallengeForm() {
+  const createChallengeFromInsight = useCarbonStore((state) => state.createChallengeFromInsight);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     title: '', category: 'food', targetKg: '', duration: 'weekly', description: '',
   });
@@ -807,14 +655,36 @@ function CustomChallengeForm() {
       <div className="text-center py-12">
         <div className="text-5xl mb-3">🌍</div>
         <div className="font-display text-3xl text-[#00C853] tracking-wide mb-2">CHALLENGE SUBMITTED!</div>
-        <p className="font-heading text-sm text-white/50">Your challenge has been sent to the community pool for review.</p>
+        <p className="font-heading text-sm text-white/50">Your challenge is now active in your arena dashboard.</p>
       </div>
     );
   }
 
   return (
     <form
-      onSubmit={e => { e.preventDefault(); setSubmitted(true); }}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setSubmitError('');
+        setIsSubmitting(true);
+        try {
+          await createChallengeFromInsight({
+            id: `custom-${Date.now()}`,
+            type: 'tip',
+            title: form.title.trim(),
+            description: form.description.trim() || `Complete this ${form.duration} ${form.category} challenge.`,
+            potentialSavingKg: Number(form.targetKg) || 5,
+            difficulty: 'medium',
+            category: form.category as 'food' | 'transport' | 'energy' | 'lifestyle',
+            actionItems: ['Track progress daily in Verdant'],
+            generatedAt: new Date(),
+          });
+          setSubmitted(true);
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : 'Failed to create challenge.');
+        } finally {
+          setIsSubmitting(false);
+        }
+      }}
       className="grid grid-cols-1 sm:grid-cols-2 gap-4"
     >
       <div className="sm:col-span-2">
@@ -887,14 +757,16 @@ function CustomChallengeForm() {
       <div className="sm:col-span-2">
         <button
           type="submit"
-          className="w-full py-3 rounded-xl font-display text-xl tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]"
+          disabled={isSubmitting}
+          className="w-full py-3 rounded-xl font-display text-xl tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #00C853, #00E676)', color: '#000', boxShadow: '0 0 20px rgba(0,200,83,0.3)' }}
         >
           <span className="flex items-center justify-center gap-2">
             <Plus size={18} />
-            SUBMIT CHALLENGE
+            {isSubmitting ? 'CREATING…' : 'SUBMIT CHALLENGE'}
           </span>
         </button>
+        {submitError && <p className="sm:col-span-2 text-sm text-red-400" role="alert">{submitError}</p>}
       </div>
     </form>
   );
@@ -913,13 +785,35 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function ChallengesPage() {
   const user = useCarbonStore((state) => state.user);
+  const challenges = useCarbonStore((state) => state.challenges);
+  const leaderboard = useCarbonStore((state) => state.leaderboard);
   const level   = user?.level  ?? 1;
   const xp      = user?.xp     ?? 120;
   const streak  = user?.streak ?? 14;
 
+  const arenaChallenges = useMemo(
+    () => challenges.map(mapChallengeToArena),
+    [challenges],
+  );
+  const { top: benchmarkLeaders, userEntry } = useMemo(
+    () => buildLeaderboardDisplay(leaderboard, streak),
+    [leaderboard, streak],
+  );
+  const badgeList = useMemo(
+    () => buildDisplayBadges(user?.badges ?? []).map((badge) => ({
+      id: badge.id,
+      name: badge.name,
+      description: badge.description ?? badge.name,
+      icon: badge.icon,
+      rarity: badge.rarity,
+      earned: badge.earned,
+    })),
+    [user?.badges],
+  );
+
   const heroText     = useTypewriter('ECO WARRIOR\nARENA', 55);
   const [selectedChallenge, setSelectedChallenge] = useState<ArenaChallenge | null>(null);
-  const [selectedBadge, setSelectedBadge]         = useState<(typeof BADGES)[0] | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeView | null>(null);
 
   // Flame flicker: alternate emoji to create animated flicker effect
   const [flameTick, setFlameTick] = useState(0);
@@ -978,8 +872,8 @@ export default function ChallengesPage() {
             <div>
               <div className="font-mono text-[11px] text-white/40 tracking-widest mb-1">YOUR RANK</div>
               <div className="font-mono text-2xl md:text-3xl" style={{ color: '#FFD600', textShadow: '0 0 20px rgba(255,214,0,0.4)' }}>
-                #47
-                <span className="font-mono text-sm text-white/40 ml-2">OF 2,340 WARRIORS</span>
+                #{userEntry?.rank ?? '—'}
+                <span className="font-mono text-sm text-white/40 ml-2">IN YOUR LEADERBOARD</span>
               </div>
             </div>
 
@@ -1008,9 +902,9 @@ export default function ChallengesPage() {
       {/* ── ACTIVE CHALLENGES ───────────────────────────────────────────── */}
       <section className="relative z-10 px-4 sm:px-8 lg:px-16 pb-16">
         <div className="max-w-7xl mx-auto">
-          <SectionTitle>ACTIVE CHALLENGES</SectionTitle>
+          <SectionTitle>YOUR CHALLENGES</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {ARENA_CHALLENGES.map((c, i) => (
+            {arenaChallenges.map((c, i) => (
               <ChallengeCard
                 key={c.id}
                 challenge={c}
@@ -1025,7 +919,10 @@ export default function ChallengesPage() {
       {/* ── GLOBAL LEADERBOARD ──────────────────────────────────────────── */}
       <section className="relative z-10 px-4 sm:px-8 lg:px-16 pb-16">
         <div className="max-w-7xl mx-auto">
-          <SectionTitle>GLOBAL LEADERBOARD</SectionTitle>
+          <SectionTitle>COMMUNITY BENCHMARK LEADERBOARD</SectionTitle>
+          <p className="font-heading text-sm text-white/45 mb-4 -mt-2">
+            Top warriors are illustrative community benchmarks. Your live rank reflects your tracked progress.
+          </p>
 
           <div
             className="rounded-2xl overflow-hidden"
@@ -1043,21 +940,21 @@ export default function ChallengesPage() {
 
             <div className="p-3 space-y-2">
               {/* Top 10 */}
-              {LEADERBOARD_DATA.filter(e => e.rank <= 10).map((entry, i) => (
+              {benchmarkLeaders.map((entry, i) => (
                 <LeaderboardRow key={entry.rank} entry={entry} index={i} isUser={false} />
               ))}
 
-              {/* Separator if user not in top 10 */}
               <div className="flex items-center gap-2 py-1 px-2">
                 <div className="flex-1 border-t border-dashed border-white/10" />
-                <span className="font-mono text-[9px] text-white/20">YOUR RANK: #47</span>
+                <span className="font-mono text-[9px] text-white/20">
+                  YOUR RANK: #{userEntry?.rank ?? '—'}
+                </span>
                 <div className="flex-1 border-t border-dashed border-white/10" />
               </div>
 
-              {/* User's own row */}
-              {LEADERBOARD_DATA.filter(e => (e as { isUser?: boolean }).isUser).map((entry, i) => (
-                <LeaderboardRow key="user" entry={entry} index={10 + i} isUser />
-              ))}
+              {userEntry && (
+                <LeaderboardRow key="user" entry={userEntry} index={10} isUser />
+              )}
             </div>
           </div>
         </div>
@@ -1069,7 +966,7 @@ export default function ChallengesPage() {
           <SectionTitle>YOUR ACHIEVEMENTS</SectionTitle>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-5">
-            {BADGES.map((badge) => {
+            {badgeList.map((badge) => {
               const r = RARITY_STYLES[badge.rarity];
               const isLegendary = badge.rarity === 'legendary';
 

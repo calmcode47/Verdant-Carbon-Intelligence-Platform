@@ -4,7 +4,7 @@ import { Activity, ActivityCategory, Badge, Challenge, LeaderboardEntry, UserPro
 import { calculateCarbon, EMISSION_FACTORS, getXPForActivity } from '@/lib/carbon-calculator';
 import { getDb } from '@/backend/db/client';
 import { ensureDatabase } from '@/backend/db/bootstrap';
-import { activities, badges, challenges, DbActivity, DbBadge, DbChallenge, DbUser, users } from '@/backend/db/schema';
+import { activities, badges, challenges, DbActivity, DbBadge, DbChallenge, DbUser, insightCache, users } from '@/backend/db/schema';
 import { CreateActivityInput, InsightInput, UpdateUserInput } from '@/backend/api/validation';
 import { AppSnapshot } from './types';
 
@@ -546,5 +546,49 @@ export async function createChallengeFromInsight(sessionId: string, insight: Ins
     });
   }
 
+  return dbSnapshot(sessionId);
+}
+
+export async function deleteAllUserData(sessionId: string): Promise<AppSnapshot> {
+  await ensureDatabase();
+  const db = getDb();
+
+  if (!db) {
+    const state = getMemoryState(sessionId);
+    const preserved = {
+      name: state.user.name,
+      email: state.user.email,
+      avatar: state.user.avatar,
+      location: state.user.location,
+      monthlyBudgetKg: state.user.monthlyBudgetKg,
+      joinedAt: state.user.joinedAt,
+    };
+    const resetUser = { ...createDefaultUser(state.user.id), ...preserved };
+    const resetState: MemoryState = {
+      user: resetUser,
+      activities: [],
+      challenges: createDefaultChallenges(resetUser.id),
+    };
+    memory.set(sessionId, resetState);
+    return snapshotFromState(resetState);
+  }
+
+  const user = await getOrCreateDbUser(sessionId);
+  await Promise.all([
+    db.delete(activities).where(eq(activities.userId, user.id)),
+    db.delete(badges).where(eq(badges.userId, user.id)),
+    db.delete(challenges).where(eq(challenges.userId, user.id)),
+    db.delete(insightCache).where(eq(insightCache.userId, user.id)),
+  ]);
+
+  await db.update(users).set({
+    totalCarbonKg: '0',
+    xp: 120,
+    level: 1,
+    streak: 1,
+    updatedAt: new Date(),
+  }).where(eq(users.id, user.id));
+
+  await seedUserRows(user.id);
   return dbSnapshot(sessionId);
 }

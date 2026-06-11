@@ -45,3 +45,13 @@ export function particleCount(base: number): number {
   if (tier === 'MEDIUM') return Math.floor(base * 0.4);
   return base;
 }
+
+/** Full-screen WebGL scenes (globe, neural core, orb telemetry). */
+export function enableWebGLScenes(): boolean {
+  return getPerformanceTier() === 'HIGH' && hasWebGLSupport();
+}
+
+/** Typewriter / fast interval UI effects. */
+export function enableRichMotion(): boolean {
+  return getPerformanceTier() === 'HIGH';
+}

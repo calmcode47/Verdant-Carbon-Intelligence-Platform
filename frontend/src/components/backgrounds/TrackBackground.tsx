@@ -1,16 +1,20 @@
 'use client';
 
+import { motionAnimation, shouldAnimateBackground } from './background-utils';
+
 export function TrackBackground() {
+  const animate = shouldAnimateBackground();
+
   return (
     <>
-      <style>{`
-        @media (prefers-reduced-motion: no-preference) {
+      {animate && (
+        <style>{`
           @keyframes track-blink {
             0%, 48%  { opacity: 0.07; }
             49%, 100% { opacity: 0; }
           }
-        }
-      `}</style>
+        `}</style>
+      )}
 
       <div
         aria-hidden="true"
@@ -23,7 +27,6 @@ export function TrackBackground() {
           background: '#030504',
         }}
       >
-        {/* HORIZONTAL SCANLINES — repeating at 3px intervals, 1.2% opacity */}
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -31,7 +34,6 @@ export function TrackBackground() {
           backgroundSize: '100% 3px',
         }} />
 
-        {/* BOTTOM-RIGHT ACCENT GLOW */}
         <div style={{
           position: 'absolute',
           bottom: '-8%',
@@ -39,10 +41,8 @@ export function TrackBackground() {
           width: '38vw',
           height: '38vw',
           background: 'radial-gradient(circle, rgba(0,230,118,0.045) 0%, transparent 60%)',
-          filter: 'blur(70px)',
         }} />
 
-        {/* TOP-LEFT COOL ACCENT */}
         <div style={{
           position: 'absolute',
           top: '-5%',
@@ -50,21 +50,20 @@ export function TrackBackground() {
           width: '28vw',
           height: '28vw',
           background: 'radial-gradient(circle, rgba(0,176,255,0.03) 0%, transparent 60%)',
-          filter: 'blur(70px)',
         }} />
 
-        {/* BLINKING CURSOR COLUMN — right 13%, indicates "recording" */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          right: '13%',
-          width: '1px',
-          background: 'rgba(0,230,118,0.07)',
-          animation: 'track-blink 1.5s step-end infinite',
-        }} />
+        {animate && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            right: '13%',
+            width: '1px',
+            background: 'rgba(0,230,118,0.07)',
+            animation: motionAnimation('track-blink 1.5s step-end infinite'),
+          }} />
+        )}
 
-        {/* VIGNETTE */}
         <div style={{
           position: 'absolute',
           inset: 0,

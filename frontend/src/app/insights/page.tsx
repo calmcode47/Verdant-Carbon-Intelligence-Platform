@@ -111,6 +111,7 @@ function WarningSparkline({ data }: { data: { day: string; carbon: number }[] })
               stroke="#FFB300" 
               strokeWidth={2} 
               dot={false}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -141,6 +142,7 @@ function PredictionChart({ data }: { data: { day: string; actual: number | null;
               stroke="#00E5FF" 
               strokeWidth={2} 
               dot={false}
+              isAnimationActive={false}
             />
             <Line 
               type="monotone" 
@@ -149,6 +151,7 @@ function PredictionChart({ data }: { data: { day: string; actual: number | null;
               strokeWidth={1.5} 
               strokeDasharray="4 4" 
               dot={false}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>

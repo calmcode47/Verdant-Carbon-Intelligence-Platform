@@ -3,7 +3,7 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, enableWebGLScenes } from '@/lib/performance';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 interface OrbData {
@@ -89,21 +89,29 @@ function DataOrbsFallback() {
   );
 }
 
-export function DataOrbs() {
+function DataOrbsCanvas() {
   const tier = getPerformanceTier();
-  if (!hasWebGLSupport()) return <DataOrbsFallback />;
+  const isVisible = useVisibilityPause();
 
   return (
-    <WebGLErrorBoundary fallback={<DataOrbsFallback />}>
       <Canvas
         dpr={safePixelRatio()}
         camera={{ position: [0, 0, 4], fov: 50 }}
-        frameloop="always"
+        frameloop={isVisible ? 'always' : 'never'}
         gl={{ antialias: tier === 'HIGH', alpha: true, stencil: false }}
         style={{ width: '100%', height: '100%' }}
       >
         <OrbScene />
       </Canvas>
+  );
+}
+
+export function DataOrbs() {
+  if (!enableWebGLScenes()) return <DataOrbsFallback />;
+
+  return (
+    <WebGLErrorBoundary fallback={<DataOrbsFallback />}>
+      <DataOrbsCanvas />
     </WebGLErrorBoundary>
   );
 }

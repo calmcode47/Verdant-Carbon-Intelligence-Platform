@@ -365,23 +365,6 @@ export default function ProfilePage() {
         className="min-h-screen relative"
         style={{ position: 'relative', zIndex: 1 }}
       >
-      {/* Warm ambient gradient */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse 60% 50% at 90% 10%, rgba(255,143,0,0.05) 0%, transparent 70%)',
-          zIndex: 0,
-        }}
-      />
-      {/* CSS noise texture */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")`,
-          zIndex: 0,
-        }}
-      />
-
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-10">
         {/* Page title */}
         <motion.div

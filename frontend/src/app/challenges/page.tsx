@@ -9,6 +9,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSharedSecondTick } from '@/hooks/useSharedSecondTick';
+import { enableRichMotion } from '@/lib/performance';
 import { useCarbonStore } from '@/store/carbon-store';
 import { buildDisplayBadges } from '@/lib/carbon-history';
 import {
@@ -70,18 +72,18 @@ function useCountdown(endsAt: Date) {
     return { d, h, m, s };
   }, [endsAt]);
 
-  const [time, setTime] = useState(calc);
-  useEffect(() => {
-    const id = setInterval(() => setTime(calc()), 1000);
-    return () => clearInterval(id);
-  }, [calc]);
-  return time;
+  const tick = useSharedSecondTick();
+  return useMemo(() => calc(), [calc, tick]);
 }
 
 // ─── HELPER: TYPEWRITER ─────────────────────────────────────────────────────
 function useTypewriter(text: string, speed = 60) {
-  const [displayed, setDisplayed] = useState('');
+  const [displayed, setDisplayed] = useState(() => (enableRichMotion() ? '' : text));
   useEffect(() => {
+    if (!enableRichMotion()) {
+      setDisplayed(text);
+      return;
+    }
     setDisplayed('');
     let i = 0;
     const id = setInterval(() => {
@@ -441,7 +443,7 @@ function ChallengeModal({
           <div className="font-mono text-[10px] text-white/40 tracking-widest mb-2">PROGRESS THIS WEEK</div>
           <ResponsiveContainer width="100%" height={80}>
             <LineChart data={progressChartData}>
-              <Line type="monotone" dataKey="kg" stroke={catColor} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="kg" stroke={catColor} strokeWidth={2} dot={false} isAnimationActive={false} />
               <Tooltip
                 contentStyle={{ background: '#0D2412', border: `1px solid ${catColor}40`, borderRadius: 8, fontSize: 11 }}
                 labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
@@ -817,15 +819,6 @@ export default function ChallengesPage() {
   const [selectedChallenge, setSelectedChallenge] = useState<ArenaChallenge | null>(null);
   const [selectedBadge, setSelectedBadge] = useState<BadgeView | null>(null);
 
-  // Flame flicker: alternate emoji to create animated flicker effect
-  const [flameTick, setFlameTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setFlameTick(t => t + 1), 400);
-    return () => clearInterval(id);
-  }, []);
-  const flameColors = ['#FF6B00', '#FFD600', '#FF4500'];
-  const flameColor  = flameColors[flameTick % flameColors.length];
-
   return (
     <>
       <ChallengesBackground />
@@ -833,17 +826,6 @@ export default function ChallengesPage() {
         className="min-h-screen relative overflow-x-hidden"
         style={{ position: 'relative', zIndex: 1 }}
       >
-      {/* CSS grain texture overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")`,
-          zIndex: 0,
-        }}
-      />
-
-
-
       {/* ── HERO: ARENA HEADER ──────────────────────────────────────────── */}
       <section className="relative z-10 pt-16 pb-12 px-4 sm:px-8 lg:px-16">
         <div className="max-w-7xl mx-auto">
@@ -893,8 +875,8 @@ export default function ChallengesPage() {
             <div>
               <div className="font-mono text-[11px] text-white/40 tracking-widest mb-1">CURRENT STREAK</div>
               <div
-                className="font-display text-3xl md:text-4xl"
-                style={{ color: flameColor, transition: 'color 0.3s ease', textShadow: `0 0 20px ${flameColor}80` }}
+                className={`font-display text-3xl md:text-4xl${enableRichMotion() ? ' arena-flame-flicker' : ''}`}
+                style={enableRichMotion() ? undefined : { color: '#FF6B00', textShadow: '0 0 20px rgba(255,107,0,0.5)' }}
               >
                 🔥 {streak} DAY STREAK
               </div>

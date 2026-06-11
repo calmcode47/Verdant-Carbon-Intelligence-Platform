@@ -9,12 +9,17 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { enableRichMotion } from '@/lib/performance';
 
 interface PageTransitionProps {
   children: React.ReactNode;
 }
 
 export function PageTransition({ children }: PageTransitionProps) {
+  if (!enableRichMotion()) {
+    return <div className="w-full flex-1 flex flex-col">{children}</div>;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

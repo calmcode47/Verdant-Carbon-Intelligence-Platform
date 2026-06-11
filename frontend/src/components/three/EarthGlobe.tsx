@@ -4,7 +4,7 @@ import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, enableWebGLScenes } from '@/lib/performance';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 // ─── Seeded pseudo-random ────────────────────────────────────────────────────
@@ -399,16 +399,15 @@ export function EarthGlobeFallback() {
 }
 
 // ─── Root export ─────────────────────────────────────────────────────────────
-export default function EarthGlobe() {
+function EarthGlobeCanvas() {
   const tier = getPerformanceTier();
-  if (!hasWebGLSupport()) return <EarthGlobeFallback />;
+  const isVisible = useVisibilityPause();
 
   return (
-    <WebGLErrorBoundary fallback={<EarthGlobeFallback />}>
-      <Canvas
+    <Canvas
         dpr={safePixelRatio()}
         camera={{ position: [0, 0, 3.5], fov: 42 }}
-        frameloop="always"
+        frameloop={isVisible ? 'always' : 'never'}
         gl={{
           antialias: tier === 'HIGH',
           alpha: true,
@@ -419,7 +418,31 @@ export default function EarthGlobe() {
         style={{ width: '100%', height: '100%' }}
       >
         <GlobeScene />
-      </Canvas>
+    </Canvas>
+  );
+}
+
+export function EarthGlobeStatic() {
+  return (
+    <div
+      role="img"
+      aria-label="Earth illustration"
+      style={{
+        width: '100%',
+        height: '100%',
+        background:
+          'radial-gradient(circle at 40% 35%, rgba(26,110,48,0.55) 0%, rgba(8,40,22,0.85) 38%, rgba(3,8,16,1) 72%)',
+      }}
+    />
+  );
+}
+
+export default function EarthGlobe() {
+  if (!enableWebGLScenes()) return <EarthGlobeStatic />;
+
+  return (
+    <WebGLErrorBoundary fallback={<EarthGlobeStatic />}>
+      <EarthGlobeCanvas />
     </WebGLErrorBoundary>
   );
 }

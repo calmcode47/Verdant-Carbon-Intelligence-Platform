@@ -3,7 +3,7 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useVisibilityPause } from '@/hooks/useVisibilityPause';
-import { safePixelRatio, getPerformanceTier, hasWebGLSupport } from '@/lib/performance';
+import { safePixelRatio, getPerformanceTier, enableWebGLScenes } from '@/lib/performance';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 function CoreMesh() {
@@ -51,17 +51,14 @@ function CoreMesh() {
 
   return (
     <group>
-      {/* Inner core */}
       <mesh ref={innerRef} material={outerMat}>
         <sphereGeometry args={[0.5, 32, 32]} />
       </mesh>
 
-      {/* Wireframe outer shell */}
       <mesh ref={outerRef} material={wireMat}>
         <icosahedronGeometry args={[0.85, 1]} />
       </mesh>
 
-      {/* Orbital rings */}
       <mesh ref={ring1} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.1, 0.006, 2, 80]} />
         <meshBasicMaterial color="#7c3aed" transparent opacity={0.4} />
@@ -74,40 +71,48 @@ function CoreMesh() {
   );
 }
 
-export function NeuralCore() {
-  const tier = getPerformanceTier();
-  const fallback = (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        minWidth: 120,
-        minHeight: 120,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 40% 40%, rgba(124,58,237,0.62), rgba(0,229,255,0.18) 46%, rgba(79,70,229,0.08) 72%)',
-        boxShadow: '0 0 40px rgba(124,58,237,0.3), inset 0 0 28px rgba(0,0,0,0.38)',
-        border: '1px solid rgba(0,229,255,0.2)',
-      }}
-      aria-hidden="true"
-    />
-  );
+const fallback = (
+  <div
+    style={{
+      width: '100%',
+      height: '100%',
+      minWidth: 120,
+      minHeight: 120,
+      borderRadius: '50%',
+      background: 'radial-gradient(circle at 40% 40%, rgba(124,58,237,0.62), rgba(0,229,255,0.18) 46%, rgba(79,70,229,0.08) 72%)',
+      boxShadow: '0 0 40px rgba(124,58,237,0.3), inset 0 0 28px rgba(0,0,0,0.38)',
+      border: '1px solid rgba(0,229,255,0.2)',
+    }}
+    aria-hidden="true"
+  />
+);
 
-  if (!hasWebGLSupport()) return fallback;
+function NeuralCoreCanvas() {
+  const tier = getPerformanceTier();
+  const isVisible = useVisibilityPause();
+
+  return (
+    <Canvas
+      dpr={safePixelRatio()}
+      camera={{ position: [0, 0, 3], fov: 50 }}
+      frameloop={isVisible ? 'always' : 'never'}
+      gl={{ antialias: tier === 'HIGH', alpha: true, stencil: false }}
+      style={{ width: '100%', height: '100%' }}
+    >
+      <ambientLight intensity={0.15} />
+      <pointLight position={[2, 2, 2]} intensity={1.0} color="#7c3aed" />
+      <pointLight position={[-2, -1, -1]} intensity={0.5} color="#a78bfa" />
+      <CoreMesh />
+    </Canvas>
+  );
+}
+
+export function NeuralCore() {
+  if (!enableWebGLScenes()) return fallback;
 
   return (
     <WebGLErrorBoundary fallback={fallback}>
-      <Canvas
-        dpr={safePixelRatio()}
-        camera={{ position: [0, 0, 3], fov: 50 }}
-        frameloop="always"
-        gl={{ antialias: tier === 'HIGH', alpha: true, stencil: false }}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <ambientLight intensity={0.15} />
-        <pointLight position={[2, 2, 2]} intensity={1.0} color="#7c3aed" />
-        <pointLight position={[-2, -1, -1]} intensity={0.5} color="#a78bfa" />
-        <CoreMesh />
-      </Canvas>
+      <NeuralCoreCanvas />
     </WebGLErrorBoundary>
   );
 }

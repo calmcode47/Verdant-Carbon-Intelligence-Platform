@@ -201,6 +201,16 @@ body {
   border-radius: 6px;
 }
 
+@keyframes arena-flame-color {
+  0%, 100% { color: #FF6B00; text-shadow: 0 0 20px rgba(255, 107, 0, 0.5); }
+  33% { color: #FFD600; text-shadow: 0 0 20px rgba(255, 214, 0, 0.5); }
+  66% { color: #FF4500; text-shadow: 0 0 20px rgba(255, 69, 0, 0.5); }
+}
+
+.arena-flame-flicker {
+  animation: arena-flame-color 1.2s ease-in-out infinite;
+}
+
 /* Prefers reduced motion — disable ALL animations globally */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
